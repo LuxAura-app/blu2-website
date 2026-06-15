@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Mali V — Better Left Unsaid 2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
@@ -14,7 +14,7 @@ html { scroll-behavior: smooth; }
   --orange: #E8501A;
   --black: #050505;
   --off-white: #F0EDE8;
-  --muted: #5A5A5A;
+  --muted: #8F8F8F;
   --border: #181818;
   --panel: #0D0D0D;
 }
@@ -42,6 +42,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
   outline: 2px solid var(--orange);
   outline-offset: 3px;
 }
+button, a {
+  touch-action: manipulation;
+}
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
@@ -54,8 +57,19 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 
 /* ── SCREENS ── */
 .screen { display: none; }
-.screen.active { display: block; }
+@keyframes screenIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.screen.active { display: block; animation: screenIn 0.4s ease-out; }
 #login-screen.active, #thanks-screen.active { display: flex; }
+
+/* ── CONTENT WIDTH (large screens) ── */
+.vote-header, .vote-tracks, .vote-submit-area,
+.party-strip, .buy-section, footer,
+#thanks-screen, #admin-screen {
+  max-width: 1280px;
+}
 
 /* ── NAV ── */
 nav {
@@ -155,7 +169,7 @@ nav {
 
 .hero-title {
   font-size: clamp(72px, 14vw, 200px);
-  font-weight: 600;
+  font-weight: 700;
   line-height: 0.88;
   letter-spacing: -0.02em;
   text-transform: uppercase;
@@ -189,7 +203,10 @@ nav {
 .hero-sep { width: 1px; height: 14px; background: var(--border); }
 
 .hero-cta {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.22em;
@@ -198,11 +215,12 @@ nav {
   background: var(--orange);
   padding: 13px 28px;
   text-decoration: none;
-  transition: background 0.18s;
+  transition: background 0.18s, transform 0.12s ease-out;
   cursor: pointer;
   border: none;
 }
 .hero-cta:hover { background: #FF6130; }
+.hero-cta:active { transform: scale(0.97); }
 
 /* LISTENING PARTY STRIP */
 .party-strip {
@@ -241,6 +259,10 @@ nav {
   flex: 1;
 }
 .party-enter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.2em;
@@ -250,11 +272,12 @@ nav {
   padding: 12px 24px;
   background: none;
   cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
+  transition: border-color 0.2s, color 0.2s, transform 0.12s ease-out;
   white-space: nowrap;
   margin-left: 40px;
 }
 .party-enter:hover { border-color: var(--orange); color: var(--orange); }
+.party-enter:active { transform: scale(0.97); }
 
 /* TRACKLIST SECTION */
 .tracklist-section {
@@ -364,7 +387,7 @@ footer a:hover { color: var(--off-white); }
 
 .login-title {
   font-size: clamp(36px, 6vw, 64px);
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.01em;
   text-transform: uppercase;
   line-height: 0.95;
@@ -387,7 +410,7 @@ footer a:hover { color: var(--off-white); }
   color: var(--off-white);
   padding: 16px 18px;
   font-family: 'Inter', sans-serif;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 300;
   outline: none;
   transition: border-color 0.18s;
@@ -410,9 +433,10 @@ footer a:hover { color: var(--off-white); }
   text-transform: uppercase;
   border: none;
   cursor: pointer;
-  transition: background 0.18s;
+  transition: background 0.18s, transform 0.12s ease-out;
 }
 .login-submit:hover { background: #FF6130; }
+.login-submit:active { transform: scale(0.98); }
 
 .login-back {
   display: block;
@@ -460,7 +484,7 @@ footer a:hover { color: var(--off-white); }
 }
 .vote-title {
   font-size: clamp(40px, 8vw, 100px);
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.02em;
   text-transform: uppercase;
   line-height: 0.9;
@@ -549,6 +573,7 @@ footer a:hover { color: var(--off-white); }
 }
 .star-btn.lit { color: var(--orange); -webkit-text-stroke: 0; }
 .star-btn:hover { transform: scale(1.15); }
+.star-btn:active { transform: scale(0.9); }
 
 /* Vibe pills */
 .vibes-label {
@@ -572,6 +597,7 @@ footer a:hover { color: var(--off-white); }
   transition: all 0.15s;
 }
 .vibe-btn:hover { color: var(--off-white); border-color: #333; }
+.vibe-btn:active { transform: scale(0.95); }
 .vibe-btn.on { color: var(--orange); border-color: var(--orange); background: rgba(232,80,26,0.07); }
 
 /* Comment */
@@ -582,12 +608,12 @@ footer a:hover { color: var(--off-white); }
   border-bottom: 1px solid var(--border);
   color: var(--off-white);
   font-family: 'Inter', sans-serif;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 300;
   padding: 12px 0;
   outline: none;
   resize: none;
-  min-height: 42px;
+  min-height: 44px;
   transition: border-color 0.18s;
 }
 .vt-comment::placeholder { color: #2A2A2A; }
@@ -615,9 +641,10 @@ footer a:hover { color: var(--off-white); }
   text-transform: uppercase;
   border: none;
   cursor: pointer;
-  transition: background 0.18s;
+  transition: background 0.18s, transform 0.12s ease-out;
 }
 .submit-btn:hover { background: #FF6130; }
+.submit-btn:active:not(:disabled) { transform: scale(0.97); }
 .submit-btn:disabled { background: #2A2A2A; color: #555; cursor: not-allowed; }
 .vote-err {
   font-size: 11px;
@@ -645,7 +672,7 @@ footer a:hover { color: var(--off-white); }
 }
 .thanks-title {
   font-size: clamp(64px, 14vw, 180px);
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.02em;
   text-transform: uppercase;
   line-height: 0.88;
@@ -760,6 +787,10 @@ footer a:hover { color: var(--off-white); }
   flex-wrap: wrap;
 }
 .btn-export {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   padding: 14px 32px;
   background: var(--orange);
   color: var(--black);
@@ -770,10 +801,15 @@ footer a:hover { color: var(--off-white); }
   text-transform: uppercase;
   border: none;
   cursor: pointer;
-  transition: background 0.18s;
+  transition: background 0.18s, transform 0.12s ease-out;
 }
 .btn-export:hover { background: #FF6130; }
+.btn-export:active { transform: scale(0.97); }
 .btn-back-admin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   padding: 14px 32px;
   background: transparent;
   color: var(--muted);
@@ -784,9 +820,10 @@ footer a:hover { color: var(--off-white); }
   text-transform: uppercase;
   border: 1px solid var(--border);
   cursor: pointer;
-  transition: all 0.18s;
+  transition: all 0.18s, transform 0.12s ease-out;
 }
 .btn-back-admin:hover { color: var(--off-white); border-color: #444; }
+.btn-back-admin:active { transform: scale(0.97); }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 640px) {
@@ -964,8 +1001,8 @@ footer a:hover { color: var(--off-white); }
   </p>
   <div style="display:flex;gap:16px;flex-wrap:wrap;">
     <a class="hero-cta" href="https://untitled.app" target="_blank">Buy BLU2 →</a>
-    <button onclick="goHome()" style="padding:13px 28px;background:transparent;color:var(--muted);font-family:'Inter',sans-serif;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;border:1px solid var(--border);cursor:pointer;" onmouseover="this.style.color='var(--off-white)'" onmouseout="this.style.color='var(--muted)'">← Back to site</button>
-    <button onclick="doLogout()" style="padding:13px 28px;background:transparent;color:var(--muted);font-family:'Inter',sans-serif;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;border:1px solid var(--border);cursor:pointer;" onmouseover="this.style.color='var(--off-white)'" onmouseout="this.style.color='var(--muted)'">Logout</button>
+    <button class="btn-back-admin" onclick="goHome()">← Back to site</button>
+    <button class="btn-back-admin" onclick="doLogout()">Logout</button>
   </div>
 </div>
 
