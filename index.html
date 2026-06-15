@@ -53,6 +53,7 @@ button, a {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+  .hero-video { display: none !important; }
 }
 
 /* ── SCREENS ── */
@@ -157,6 +158,10 @@ nav {
 .hero-content {
   position: relative;
   z-index: 2;
+}
+
+.hero-video {
+  display: none;
 }
 
 .hero-eyebrow {
@@ -829,6 +834,18 @@ footer a:hover { color: var(--off-white); }
 @media (max-width: 640px) {
   nav { padding: 18px 20px; }
   .hero { padding: 90px 20px 48px; }
+  .hero-video {
+    display: block;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    opacity: 0.55;
+    filter: saturate(0.8) brightness(1.0);
+    z-index: 0;
+  }
   .party-strip { flex-direction: column; align-items: flex-start; gap: 16px; padding: 24px 20px; }
   .party-divider { display: none; }
   .party-enter { margin-left: 0; }
@@ -869,6 +886,9 @@ footer a:hover { color: var(--off-white); }
 <div id="home-screen" class="screen active">
 
   <div class="hero">
+    <video class="hero-video" muted loop autoplay playsinline preload="metadata" aria-hidden="true">
+      <source src="assets/rose-on-fire.mp4" type="video/mp4">
+    </video>
     <div class="hero-content">
       <div class="hero-eyebrow">July 1, 2026</div>
       <h1 class="hero-title">
