@@ -1241,7 +1241,11 @@ function doSubmit() {
   submitBtn.textContent = "Submitting…";
 
   responses.push(entry);
-  localStorage.setItem(LS_KEY, JSON.stringify(responses));
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(responses));
+  } catch (err) {
+    console.error("Local save failed:", err);
+  }
   sendToCloud(entry);
   show("thanks-screen");
 }
