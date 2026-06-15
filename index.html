@@ -31,6 +31,7 @@ body {
 /* ── SCREENS ── */
 .screen { display: none; }
 .screen.active { display: block; }
+#login-screen.active, #thanks-screen.active { display: flex; }
 
 /* ── NAV ── */
 nav {
@@ -316,7 +317,6 @@ footer a:hover { color: var(--off-white); }
 ══════════════════════════════════ */
 #login-screen {
   min-height: 100vh;
-  display: flex;
   align-items: center;
   justify-content: center;
   padding: 120px 40px 60px;
@@ -600,7 +600,6 @@ footer a:hover { color: var(--off-white); }
 ══════════════════════════════════ */
 #thanks-screen {
   min-height: 100vh;
-  display: flex;
   flex-direction: column;
   justify-content: center;
   padding: 120px 40px 80px;
@@ -789,6 +788,7 @@ footer a:hover { color: var(--off-white); }
 </div>
   <div class="nav-right">
     <span id="nav-user"></span>
+    <button id="nav-logout" onclick="doLogout()" style="display:none;">Logout</button>
     <a href="https://untitled.app" target="_blank">Buy</a>
     <button id="nav-vote-btn" onclick="handleVoteNav()">Vote</button>
   </div>
@@ -933,6 +933,7 @@ footer a:hover { color: var(--off-white); }
   <div style="display:flex;gap:16px;flex-wrap:wrap;">
     <a class="hero-cta" href="https://untitled.app" target="_blank">Buy BLU2 →</a>
     <button onclick="goHome()" style="padding:13px 28px;background:transparent;color:var(--muted);font-family:'Inter',sans-serif;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;border:1px solid var(--border);cursor:pointer;" onmouseover="this.style.color='var(--off-white)'" onmouseout="this.style.color='var(--muted)'">← Back to site</button>
+    <button onclick="doLogout()" style="padding:13px 28px;background:transparent;color:var(--muted);font-family:'Inter',sans-serif;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;border:1px solid var(--border);cursor:pointer;" onmouseover="this.style.color='var(--off-white)'" onmouseout="this.style.color='var(--muted)'">Logout</button>
   </div>
 </div>
 
@@ -1016,6 +1017,15 @@ function show(id) {
 
 function goHome() { show("home-screen"); }
 
+function doLogout() {
+  user = null;
+  ratings = {}; vibes = {}; comments = {};
+  document.getElementById("nav-user").textContent = "";
+  document.getElementById("nav-user").style.display = "none";
+  document.getElementById("nav-logout").style.display = "none";
+  goHome();
+}
+
 function handleVoteNav() {
   if (user) { show("vote-screen"); }
   else { show("login-screen"); }
@@ -1053,6 +1063,7 @@ function doLogin() {
   user = { first, last, email, phone, ts: new Date().toISOString() };
   document.getElementById("nav-user").textContent = first;
   document.getElementById("nav-user").style.display = "block";
+  document.getElementById("nav-logout").style.display = "block";
 
   buildVoteTracks();
   show("vote-screen");
