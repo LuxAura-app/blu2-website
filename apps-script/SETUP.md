@@ -7,17 +7,29 @@ This connects the BLU2 listening party survey to a Google Sheet so that:
 - Every submission emails the voter's results as a CSV + PDF to
   `titledtentatively@gmail.com`.
 
-## 1. Create the Sheet + Script
+## 1. Create the Script
 
-1. Go to [sheets.google.com](https://sheets.google.com) and create a new
-   blank spreadsheet. Name it something like `BLU2 Votes`.
-2. In the menu, go to **Extensions → Apps Script**.
-3. Delete the placeholder `Code.gs` contents and paste in the contents of
+The script in this repo is already pointed at the BLU2 Votes sheet via
+`SPREADSHEET_ID`, so the script project does **not** need to be bound to
+that sheet. This means you can create it as a **standalone project**,
+which avoids the "Apps Script is unavailable" error that the
+Extensions → Apps Script menu sometimes throws inside Sheets.
+
+1. Go to [script.google.com](https://script.google.com) and click
+   **New project**.
+2. Delete the placeholder `Code.gs` contents and paste in the contents of
    `apps-script/Code.gs` from this repo.
-4. (Optional) Update `ADMIN_EMAIL` or `ADMIN_PASS` at the top of the script.
+3. (Optional) Update `ADMIN_EMAIL` or `ADMIN_PASS` at the top of the script.
    `ADMIN_PASS` must match the `ADMIN_PASS` constant in `index.html`
-   (defaults to `maliv2026`).
-5. Save the project (e.g. name it `BLU2 Vote Sync`).
+   (defaults to `maliv2026`). If you're pointing this at a different sheet,
+   also update `SPREADSHEET_ID` (the long ID in the sheet's URL between
+   `/d/` and `/edit`).
+4. Rename the project (top left, "Untitled project") to something like
+   `BLU2 Vote Sync`, then save (Ctrl/Cmd+S).
+
+If Extensions → Apps Script works fine for you, that's an equally valid
+way to create the project — just make sure the pasted code still includes
+the `SPREADSHEET_ID` / `openById` call so it can find the right sheet.
 
 ## 2. Deploy as a Web App
 

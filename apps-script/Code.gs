@@ -1,9 +1,10 @@
 /**
  * BLU2 Listening Party — Vote Sync & Email backend.
- * Deploy as a Google Apps Script Web App bound to a Google Sheet.
+ * Deploy as a Google Apps Script Web App pointed at the BLU2 Votes sheet.
  * See SETUP.md for step-by-step deployment instructions.
  */
 
+const SPREADSHEET_ID = "1l_XQQKZ4Sss_qQyA5bLfaHQ2OVh62XwhH1xzwvbHUm4";
 const SHEET_NAME   = "Responses";
 const ADMIN_EMAIL  = "titledtentatively@gmail.com";
 const ADMIN_PASS   = "maliv2026"; // must match ADMIN_PASS in index.html
@@ -70,7 +71,7 @@ function jsonOut(obj) {
 }
 
 function getSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   return ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
 }
 
