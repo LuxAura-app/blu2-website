@@ -843,7 +843,7 @@ footer a:hover { color: var(--off-white); }
   </div>
 
   <footer>
-    <p>© 2026 Mali V</p>
+    <p>© 2026 AllFlightsDelayed</p>
     <div class="social-links">
       <a href="https://instagram.com/mali__v" target="_blank">Instagram</a>
       <a href="https://youtube.com/@mali__v" target="_blank">YouTube</a>
@@ -971,6 +971,7 @@ footer a:hover { color: var(--off-white); }
   </div>
 
   <div class="admin-actions">
+    <button class="btn-export" onclick="syncAllVotes()">Sync All Votes (Cloud) →</button>
     <button class="btn-export" onclick="exportCSV()">Export CSV →</button>
     <button class="btn-back-admin" onclick="goHome()">← Back to site</button>
   </div>
@@ -999,6 +1000,11 @@ const TRACKS = [
 const VIBES = ["Hard","Smooth","Emotional","Anthem","Lowkey","Party","Cinematic","Personal Fav"];
 const ADMIN_PASS = "maliv2026";
 const LS_KEY = "blu2_responses";
+
+// Google Apps Script Web App URL — see apps-script/SETUP.md to configure.
+// Each submission is posted here, which appends a row to the master Sheet
+// and emails a per-person CSV + PDF summary to titledtentatively@gmail.com.
+const SHEET_WEBHOOK_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
 
 let user = null;
 let ratings = {};
@@ -1183,7 +1189,38 @@ function doSubmit() {
 
   responses.push(entry);
   localStorage.setItem(LS_KEY, JSON.stringify(responses));
+  sendToCloud(entry);
   show("thanks-screen");
+}
+
+function sendToCloud(entry) {
+  if (!SHEET_WEBHOOK_URL || SHEET_WEBHOOK_URL.startsWith("PASTE_")) return;
+  fetch(SHEET_WEBHOOK_URL, {
+    method: "POST",
+    mode: "no-cors",
+    body: JSON.stringify({ ...entry, tracks: TRACKS })
+  }).catch(err => console.error("Cloud sync failed:", err));
+}
+
+/* ────────────────────────────────────────────
+   CLOUD SYNC (Google Sheet — see apps-script/SETUP.md)
+──────────────────────────────────────────── */
+async function syncAllVotes() {
+  if (!SHEET_WEBHOOK_URL || SHEET_WEBHOOK_URL.startsWith("PASTE_")) {
+    alert("Cloud sync isn't configured yet. See apps-script/SETUP.md.");
+    return;
+  }
+  try {
+    const res = await fetch(`${SHEET_WEBHOOK_URL}?pass=${encodeURIComponent(ADMIN_PASS)}`);
+    const data = await res.json();
+    if (data.error) { alert("Sync failed: " + data.error); return; }
+    responses = data.responses || [];
+    localStorage.setItem(LS_KEY, JSON.stringify(responses));
+    buildAdmin();
+    alert(`Synced ${responses.length} vote${responses.length !== 1 ? "s" : ""} from the cloud.`);
+  } catch (err) {
+    alert("Could not reach the cloud sheet. Check the webhook URL and your connection.");
+  }
 }
 
 /* ────────────────────────────────────────────
