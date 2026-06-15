@@ -82,3 +82,23 @@ Apps Script Web App URLs only change if you create a **new deployment**.
 If you edit `Code.gs` later, use **Deploy → Manage deployments → Edit →
 New version** to update the existing deployment in place (keeps the same
 URL).
+
+### Preferred: use clasp (avoids copy/paste entirely)
+
+This project is linked to the live Apps Script project via `clasp`
+(`apps-script/.clasp.json`, scriptId
+`1LAUGhzNbRavIBuX8EKuXaK4YofVTykM0ROpGdxj2a9_Smy6kh2wr4ZwU`). `clasp` is
+already authenticated on this machine (`~/.clasprc.json`), so future edits
+to `Code.gs` are just:
+
+```sh
+cd apps-script
+clasp push                                    # uploads Code.gs + appsscript.json
+clasp create-version "Describe the change"    # creates an immutable version
+clasp redeploy <deploymentId> -V <version> -d "Description"
+```
+
+The live webhook's deployment ID is `AKfycbzttxDFBLEW-A7cmT90gi_F6VRDPRP19if4aWSkWJydExr4hcrLARYoKZuoeEumI3sN`
+(same as `SHEET_WEBHOOK_URL` in `index.html`). Run `clasp list-deployments`
+to confirm the deployment ID and current version. This keeps the `/exec`
+URL stable, so `index.html` never needs to change.
