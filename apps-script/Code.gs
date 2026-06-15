@@ -5,26 +5,35 @@
  */
 
 const SPREADSHEET_ID = "1l_XQQKZ4Sss_qQyA5bLfaHQ2OVh62XwhH1xzwvbHUm4";
-const SHEET_NAME   = "Responses";
-const ADMIN_EMAIL  = "titledtentatively@gmail.com";
-const ADMIN_PASS   = "maliv2026"; // must match ADMIN_PASS in index.html
-const TRACK_COUNT  = 13;
+const SHEET_NAME     = "Responses";
+const CONTACTS_SHEET_NAME = "Contacts";
+const ADMIN_EMAIL    = "titledtentatively@gmail.com";
+const ADMIN_PASS     = "maliv2026"; // must match ADMIN_PASS in index.html
+const TRACK_COUNT    = 13;
 
 /**
- * Called by the site on vote submission.
- * Appends a row to the sheet and emails the voter's results
- * as a CSV + PDF attachment to ADMIN_EMAIL.
+ * Called by the site on login and on vote submission.
+ *
+ * - `{ type: "login", user }` — upserts the contact into the Contacts
+ *   sheet for future email/text marketing. No email is sent.
+ * - Vote submissions (default) — append a row to the Responses sheet,
+ *   upsert the contact, and email the voter's results as a CSV + PDF
+ *   attachment to ADMIN_EMAIL.
  */
 function doPost(e) {
-  const entry  = JSON.parse(e.postData.contents);
-  const tracks = entry.tracks || [];
+  const entry = JSON.parse(e.postData.contents);
 
+  if (entry.type === "login") {
+    upsertContact(entry.user, "Login");
+    return jsonOut({ ok: true });
+  }
+
+  const tracks = entry.tracks || [];
   appendRow(entry);
+  upsertContact(entry.user, "Vote");
   emailVote(entry, tracks);
 
-  return ContentService
-    .createTextOutput(JSON.stringify({ ok: true }))
-    .setMimeType(ContentService.MimeType.JSON);
+  return jsonOut({ ok: true });
 }
 
 /**
@@ -73,6 +82,40 @@ function jsonOut(obj) {
 function getSheet() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   return ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
+}
+
+function getContactsSheet() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let sheet = ss.getSheetByName(CONTACTS_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(CONTACTS_SHEET_NAME);
+    sheet.appendRow(["First", "Last", "Email", "Phone", "First Seen", "Last Seen", "Source"]);
+  }
+  return sheet;
+}
+
+/**
+ * Adds or updates a row in the Contacts sheet, keyed by email
+ * (case-insensitive), so the list can be used for future
+ * email/text marketing campaigns.
+ */
+function upsertContact(user, source) {
+  if (!user || !user.email) return;
+
+  const sheet = getContactsSheet();
+  const data  = sheet.getDataRange().getValues();
+  const email = user.email.trim().toLowerCase();
+  const now   = new Date();
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][2]).trim().toLowerCase() === email) {
+      sheet.getRange(i + 1, 1, 1, 4).setValues([[user.first, user.last, user.email, user.phone]]);
+      sheet.getRange(i + 1, 6).setValue(now);
+      return;
+    }
+  }
+
+  sheet.appendRow([user.first, user.last, user.email, user.phone, now, now, source]);
 }
 
 function appendRow(entry) {

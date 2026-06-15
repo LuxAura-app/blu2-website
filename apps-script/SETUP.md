@@ -6,6 +6,9 @@ This connects the BLU2 listening party survey to a Google Sheet so that:
   in one document" for the admin export).
 - Every submission emails the voter's results as a CSV + PDF to
   `titledtentatively@gmail.com`.
+- Every login (whether or not they finish voting) and every submission adds
+  the person's name/email/phone to a `Contacts` tab for future email/text
+  marketing campaigns.
 
 ## 1. Create the Script
 
@@ -55,10 +58,17 @@ the `SPREADSHEET_ID` / `openById` call so it can find the right sheet.
 
 ## How it works
 
+- **On login**: the site `fetch()`s `{ type: "login", user }` to the Web
+  App. The script adds/updates a row in the `Contacts` tab — no email is
+  sent. This captures everyone who logs in, even if they don't finish
+  voting, for future email/text marketing.
 - **On submit**: the site `fetch()`s the entry (ratings, vibes, comments,
   track list) to the Web App. The script appends a row to the `Responses`
-  sheet and emails a CSV + PDF summary of that person's votes to
-  `titledtentatively@gmail.com`.
+  sheet, upserts the `Contacts` row, and emails a CSV + PDF summary of that
+  person's votes to `titledtentatively@gmail.com`.
+- **Contacts tab**: one row per person, keyed by email (case-insensitive).
+  Columns are `First, Last, Email, Phone, First Seen, Last Seen, Source`.
+  Repeat logins/submissions update the same row instead of duplicating it.
 - **Admin → Sync All Votes (Cloud)**: fetches every row from the Sheet
   (authenticated with `ADMIN_PASS`) and merges it into the admin dashboard,
   so **Export CSV** then produces one combined document of every vote ever

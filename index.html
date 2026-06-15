@@ -1103,6 +1103,8 @@ function doLogin() {
   document.getElementById("nav-user").style.display = "block";
   document.getElementById("nav-logout").style.display = "block";
 
+  sendContactToCloud(user);
+
   buildVoteTracks();
   show("vote-screen");
 
@@ -1257,6 +1259,19 @@ function sendToCloud(entry) {
     mode: "no-cors",
     body: JSON.stringify({ ...entry, tracks: TRACKS })
   }).catch(err => console.error("Cloud sync failed:", err));
+}
+
+/**
+ * Logs the voter's contact info to the Contacts tab for future
+ * email/text marketing — sent on login, independent of voting.
+ */
+function sendContactToCloud(u) {
+  if (!SHEET_WEBHOOK_URL || SHEET_WEBHOOK_URL.startsWith("PASTE_")) return;
+  fetch(SHEET_WEBHOOK_URL, {
+    method: "POST",
+    mode: "no-cors",
+    body: JSON.stringify({ type: "login", user: u })
+  }).catch(err => console.error("Contact sync failed:", err));
 }
 
 /* ────────────────────────────────────────────
