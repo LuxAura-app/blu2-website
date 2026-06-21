@@ -165,6 +165,13 @@ nav {
   letter-spacing: 0.08em;
   color: var(--muted);
 }
+.hero-time {
+  margin-top: 6px;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--orange);
+}
 .hero-arrow {
   margin-top: 36px;
   width: 22px;
@@ -274,6 +281,10 @@ nav {
   min-height: 44px;
 }
 .field select { cursor: pointer; }
+.field select option {
+  background: #0D0D0D;
+  color: var(--off-white);
+}
 .field textarea { resize: vertical; min-height: 80px; }
 .field input::placeholder, .field textarea::placeholder { color: #555; }
 .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--orange); }
@@ -338,16 +349,6 @@ nav {
 }
 .confirm-title span { color: var(--orange); }
 .confirm-sub { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
-.confirm-cta {
-  display: block;
-  text-align: center;
-  color: var(--orange);
-  font-size: 13px;
-  letter-spacing: 0.1em;
-  text-decoration: none;
-  margin-top: 18px;
-}
-.confirm-cta:hover { text-decoration: underline; }
 
 /* ── FOOTER ── */
 footer {
@@ -439,6 +440,7 @@ table.admin-table th { color: var(--muted); font-size: 11px; letter-spacing: 0.1
   <h1 class="hero-title">YOU'RE<br/><span class="line2">INVITED</span></h1>
   <p class="hero-sub">BLU2 Listening Party · Mali V</p>
   <p class="hero-date">Saturday, June 27, 2026</p>
+  <p class="hero-time">6:00 PM – 11:00 PM</p>
   <div class="hero-arrow" aria-hidden="true"></div>
 </section>
 
@@ -537,8 +539,7 @@ table.admin-table th { color: var(--muted); font-size: 11px; letter-spacing: 0.1
 
     <div id="confirm-view" hidden>
       <h2 class="confirm-title">You're <span>Locked In.</span></h2>
-      <p class="confirm-sub">See you June 27th. Check your email and your texts — details incoming.</p>
-      <a class="confirm-cta" href="https://untitled.app" target="_blank" rel="noopener">Stream BLU2 Early →</a>
+      <p class="confirm-sub">See you June 27th. We'll send the location to your email and phone on June 26th — the day before the event.</p>
     </div>
 
   </div>
