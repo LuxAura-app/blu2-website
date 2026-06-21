@@ -338,29 +338,6 @@ nav {
 }
 .confirm-title span { color: var(--orange); }
 .confirm-sub { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
-.confirm-divider { border-top: 1px solid var(--border); margin: 28px 0; }
-.confirm-share-label {
-  font-size: 11px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--orange);
-  margin-bottom: 14px;
-}
-.btn-secondary {
-  width: 100%;
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--off-white);
-  padding: 14px;
-  font-size: 12px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  cursor: pointer;
-  min-height: 48px;
-  margin-bottom: 12px;
-  transition: border-color 0.2s, color 0.2s;
-}
-.btn-secondary:hover { border-color: var(--orange); color: var(--orange); }
 .confirm-cta {
   display: block;
   text-align: center;
@@ -560,10 +537,7 @@ table.admin-table th { color: var(--muted); font-size: 11px; letter-spacing: 0.1
 
     <div id="confirm-view" hidden>
       <h2 class="confirm-title">You're <span>Locked In.</span></h2>
-      <p class="confirm-sub">See you June 27th. Check your email — details incoming.</p>
-      <div class="confirm-divider"></div>
-      <div class="confirm-share-label">Tell Your People →</div>
-      <button class="btn-secondary" id="btn-copy-link">Copy Invite Link</button>
+      <p class="confirm-sub">See you June 27th. Check your email and your texts — details incoming.</p>
       <a class="confirm-cta" href="https://untitled.app" target="_blank" rel="noopener">Stream BLU2 Early →</a>
     </div>
 
@@ -741,21 +715,6 @@ form.addEventListener("submit", e => {
 
   document.getElementById("form-view").hidden = true;
   document.getElementById("confirm-view").hidden = false;
-});
-
-/* ── SHARE / COPY LINK ── */
-document.getElementById("btn-copy-link").addEventListener("click", async () => {
-  const url = window.location.origin + "/rsvp";
-  const text = `Mali V's BLU2 Listening Party is June 27. RSVP here: ${url}`;
-  try {
-    await navigator.clipboard.writeText(text);
-    const btn = document.getElementById("btn-copy-link");
-    const original = btn.textContent;
-    btn.textContent = "Copied ✓";
-    setTimeout(() => { btn.textContent = original; }, 2000);
-  } catch (err) {
-    alert(text);
-  }
 });
 
 /* ── ADMIN DASHBOARD ── */
