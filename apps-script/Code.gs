@@ -311,7 +311,6 @@ function emailRsvpGuest(entry) {
           <tr><td style="padding:4px 12px 4px 0;">Album</td><td style="color:#F0EDE8;">Better Left Unsaid 2</td></tr>
           <tr><td style="padding:4px 12px 4px 0;">Status</td><td style="color:#E8501A;">${statusLabel}</td></tr>
         </table>
-        <a href="https://untitled.app" style="display:inline-block;background:#E8501A;color:#050505;padding:14px 28px;text-decoration:none;font-weight:bold;letter-spacing:1px;">BUY THE ALBUM EARLY</a>
         <p style="margin-top:36px;font-size:12px;color:#8F8F8F;">All Flights Delayed · @mali__v · betterleftunsaid2.com</p>
       </div>
     </div>`;

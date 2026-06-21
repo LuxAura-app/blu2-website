@@ -654,6 +654,27 @@ function updateCounterText() {
 }
 updateCounterText();
 
+/**
+ * The counter above is computed from this browser's own localStorage,
+ * which only ever contains RSVPs submitted from this device. Pull the
+ * real cloud total on load (and periodically) so every visitor sees
+ * the same live count, not just their own submissions.
+ */
+async function syncCounterFromCloud() {
+  if (!SHEET_WEBHOOK_URL || SHEET_WEBHOOK_URL.startsWith("PASTE_")) return;
+  try {
+    const res = await fetch(`${SHEET_WEBHOOK_URL}?pass=${encodeURIComponent(ADMIN_PASS)}&type=rsvp`);
+    const data = await res.json();
+    if (data.error || !data.rsvps) return;
+    saveRsvpList(data.rsvps);
+    updateCounterText();
+  } catch (err) {
+    console.error("Counter cloud sync failed:", err);
+  }
+}
+syncCounterFromCloud();
+setInterval(syncCounterFromCloud, 60000);
+
 /* ── SCROLL-IN PANEL ── */
 const panel = document.getElementById("rsvp-panel");
 const observer = new IntersectionObserver(entries => {
