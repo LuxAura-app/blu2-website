@@ -12,6 +12,8 @@ const ADMIN_EMAIL    = "titledtentatively@gmail.com";
 const ADMIN_PASS     = "maliv2026"; // must match ADMIN_PASS in index.html and rsvp.html
 const TRACK_COUNT    = 13;
 const EVENT_LABEL    = "BLU2 Listening Party — Saturday, June 27, 2026";
+const EVENT_TIME     = "6:00 PM – 11:00 PM";
+const ALBUM_ART_URL  = "https://www.betterleftunsaid2.com/img/BurningRosePic.jpeg";
 
 // EVENT LOCATION: The Brewery Recording Studio, 910 Grand St, Brooklyn, NY 11211
 // EVENT TIME: 6pm - 11pm (sharp start)
@@ -62,6 +64,14 @@ function doPost(e) {
  * shaped to match the `responses` array used in index.html.
  */
 function doGet(e) {
+  // Public, no admin pass required — lets a guest who lost their
+  // confirmation email/text find their own RSVP status and (once
+  // sendLocationReveal() has run) the venue, by looking themselves
+  // up by the email they RSVP'd with.
+  if (e.parameter.type === "lookup") {
+    return jsonOut(lookupGuest(e.parameter.email));
+  }
+
   if (!e.parameter.pass || e.parameter.pass !== ADMIN_PASS) {
     return jsonOut({ error: "Unauthorized" });
   }
@@ -281,9 +291,44 @@ function getAllRsvps() {
   });
 }
 
+/**
+ * Self-service lookup for a guest who lost their confirmation
+ * email/text — finds their RSVP by the exact email they registered
+ * with, and only includes the venue if sendLocationReveal() has
+ * already run (LOCATION_REVEALED script property). Never returns
+ * other guests' data, phone numbers, or messages.
+ */
+function lookupGuest(email) {
+  if (!email) return { found: false };
+
+  const normalized = String(email).trim().toLowerCase();
+  const rsvp = getAllRsvps().find(r => String(r.email).trim().toLowerCase() === normalized);
+  const revealed = PropertiesService.getScriptProperties().getProperty("LOCATION_REVEALED") === "true";
+
+  if (!rsvp) return { found: false };
+
+  const result = {
+    found: true,
+    status: rsvp.status,
+    guestCount: rsvp.guestCount,
+    eventLabel: EVENT_LABEL,
+    eventTime: EVENT_TIME,
+    venueRevealed: revealed
+  };
+
+  if (revealed) {
+    const venue = getVenueInfo();
+    result.venueName = venue.name;
+    result.venueAddress = venue.address;
+    result.doors = venue.doors;
+  }
+
+  return result;
+}
+
 const RSVP_STATUS_LABEL = { going: "I'M THERE", maybe: "MAYBE", cantmake: "CAN'T MAKE IT" };
 
-function emailRsvpGuest(entry) {
+function buildRsvpGuestHtml(entry) {
   const statusLabel = RSVP_STATUS_LABEL[entry.status] || entry.status;
   const isGoing = entry.status === "going";
 
@@ -294,32 +339,45 @@ function emailRsvpGuest(entry) {
       ? "No pressure — you're on the list as a maybe. Lock it in any time before June 27th at the link below."
       : "We'll miss you this time. BLU2 streams everywhere July 1st — don't miss the album.";
 
-  const locationNote = "Location details will be sent to you on June 26th — the day before the event. Make sure you're watching your inbox and texts.";
+  const locationNote = "Location details will be sent to you on June 26th — the day before the event. Make sure you're watching your inbox and texts. Lost the message? Head back to betterleftunsaid2.com/rsvp and look up your RSVP by email to pull it up again.";
   const showLocationNote = isGoing || entry.status === "maybe";
 
-  const html = `
-    <div style="background:#050505;color:#F0EDE8;font-family:Arial,sans-serif;padding:0;margin:0;">
-      <div style="background:#E8501A;color:#050505;padding:28px 32px;font-size:24px;font-weight:bold;letter-spacing:1px;">
+  return `
+    <div style="background:#050505;color:#F0EDE8;font-family:Arial,sans-serif;padding:0;margin:0;max-width:600px;">
+      <img src="${ALBUM_ART_URL}" alt="Better Left Unsaid 2" width="600" style="width:100%;max-width:600px;height:220px;object-fit:cover;display:block;filter:saturate(0.9);"/>
+      <div style="background:#E8501A;color:#050505;padding:24px 32px;font-size:24px;font-weight:bold;letter-spacing:1px;border-bottom:4px solid #050505;">
         ${headline}
       </div>
       <div style="padding:32px;">
         <p style="font-size:15px;line-height:1.6;">${bodyCopy}</p>
         ${showLocationNote ? `<p style="font-size:14px;line-height:1.6;color:#E8501A;">${locationNote}</p>` : ""}
-        <table style="margin:24px 0;font-size:14px;color:#8F8F8F;">
-          <tr><td style="padding:4px 12px 4px 0;">Event</td><td style="color:#F0EDE8;">${EVENT_LABEL}</td></tr>
-          <tr><td style="padding:4px 12px 4px 0;">Artist</td><td style="color:#F0EDE8;">Mali V</td></tr>
-          <tr><td style="padding:4px 12px 4px 0;">Album</td><td style="color:#F0EDE8;">Better Left Unsaid 2</td></tr>
-          <tr><td style="padding:4px 12px 4px 0;">Status</td><td style="color:#E8501A;">${statusLabel}</td></tr>
+        <table style="margin:24px 0;font-size:14px;color:#8F8F8F;border-top:1px solid #181818;border-bottom:1px solid #181818;padding:12px 0;">
+          <tr><td style="padding:6px 12px 6px 0;">Event</td><td style="color:#F0EDE8;">${EVENT_LABEL}</td></tr>
+          <tr><td style="padding:6px 12px 6px 0;">Time</td><td style="color:#F0EDE8;">${EVENT_TIME}</td></tr>
+          <tr><td style="padding:6px 12px 6px 0;">Artist</td><td style="color:#F0EDE8;">Mali V</td></tr>
+          <tr><td style="padding:6px 12px 6px 0;">Album</td><td style="color:#F0EDE8;">Better Left Unsaid 2</td></tr>
+          <tr><td style="padding:6px 12px 6px 0;">Status</td><td style="color:#E8501A;">${statusLabel}</td></tr>
         </table>
-        <p style="margin-top:36px;font-size:12px;color:#8F8F8F;">All Flights Delayed · @mali__v · betterleftunsaid2.com</p>
+        <p style="margin-top:36px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#E8501A;">All Flights Delayed · @mali__v · betterleftunsaid2.com</p>
       </div>
     </div>`;
+}
+
+function emailRsvpGuest(entry) {
+  const isGoing = entry.status === "going";
+  const showLocationNote = isGoing || entry.status === "maybe";
+  const bodyCopy = isGoing
+    ? "Your RSVP is confirmed. Details on location and everything you need to know before June 27th are coming your way soon. Mali V can't wait to see you in the room."
+    : entry.status === "maybe"
+      ? "No pressure — you're on the list as a maybe. Lock it in any time before June 27th at the link below."
+      : "We'll miss you this time. BLU2 streams everywhere July 1st — don't miss the album.";
+  const locationNote = "Location details will be sent to you on June 26th — the day before the event. Make sure you're watching your inbox and texts. Lost the message? Head back to betterleftunsaid2.com/rsvp and look up your RSVP by email to pull it up again.";
 
   GmailApp.sendEmail(
     entry.email,
     isGoing ? "You're locked in. BLU2 Listening Party — June 27" : "BLU2 Listening Party — RSVP received",
     showLocationNote ? `${bodyCopy}\n\n${locationNote}` : bodyCopy,
-    { htmlBody: html, name: "Mali V" }
+    { htmlBody: buildRsvpGuestHtml(entry), name: "Mali V" }
   );
 }
 
@@ -365,10 +423,23 @@ function addToResendContacts(data) {
 }
 
 /**
+ * The venue, kept out of EVENT_LABEL/EVENT_TIME so it's never sent in
+ * the RSVP confirmation. Only sendLocationReveal() and the post-reveal
+ * website lookup (doGet type=lookup) are allowed to surface this.
+ */
+function getVenueInfo() {
+  return {
+    name: "The Brewery Recording Studio",
+    address: "910 Grand St, Brooklyn, NY 11211",
+    doors: "Doors open 6pm. Sharp. Don't be late."
+  };
+}
+
+/**
  * The June 26 location reveal — emails the venue/time to everyone who
- * RSVP'd "going" or "maybe", one day before the event. The address is
- * intentionally hardcoded here rather than read from a constant, since
- * this is the one function whose entire job is to reveal it.
+ * RSVP'd "going" or "maybe", one day before the event. Also flips the
+ * LOCATION_REVEALED script property so the website's "find my RSVP"
+ * lookup starts surfacing the venue to guests who lost the email/text.
  *
  * HOW TO RUN: open script.google.com → this project → select
  * "sendLocationReveal" from the function dropdown in the toolbar →
@@ -376,29 +447,33 @@ function addToResendContacts(data) {
  * in Project Settings → Script Properties, and a verified sending
  * domain in the Resend dashboard.
  */
+function buildLocationRevealHtml() {
+  const venue = getVenueInfo();
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue.name + ", " + venue.address)}`;
+
+  return `
+    <div style="background:#050505;color:#F0EDE8;font-family:Arial,sans-serif;padding:0;margin:0;max-width:600px;">
+      <img src="${ALBUM_ART_URL}" alt="Better Left Unsaid 2" width="600" style="width:100%;max-width:600px;height:220px;object-fit:cover;display:block;filter:saturate(0.9);"/>
+      <div style="background:#E8501A;color:#050505;padding:24px 32px;font-size:24px;font-weight:bold;letter-spacing:1px;border-bottom:4px solid #050505;">
+        YOU'RE EXPECTED.
+      </div>
+      <div style="padding:32px;">
+        <p style="font-size:18px;font-weight:bold;margin-bottom:4px;">${venue.name}</p>
+        <p style="font-size:15px;color:#8F8F8F;margin-bottom:24px;">${venue.address}</p>
+        <p style="font-size:15px;line-height:1.6;">${venue.doors}</p>
+        <a href="${mapsUrl}" style="display:inline-block;background:#E8501A;color:#050505;padding:14px 28px;text-decoration:none;font-weight:bold;letter-spacing:1px;margin-top:24px;">GET DIRECTIONS →</a>
+        <p style="margin-top:36px;font-size:14px;line-height:1.6;color:#8F8F8F;">Lost this email? Head back to <a href="https://www.betterleftunsaid2.com/rsvp#lookup" style="color:#E8501A;">betterleftunsaid2.com/rsvp</a> and look up your RSVP by email to pull the address back up.</p>
+        <p style="margin-top:24px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#E8501A;">Better Left Unsaid 2 · Mali V · All Flights Delayed</p>
+      </div>
+    </div>`;
+}
+
 function sendLocationReveal() {
   const apiKey = PropertiesService.getScriptProperties().getProperty("RESEND_API_KEY");
   if (!apiKey) throw new Error("RESEND_API_KEY isn't set in Script Properties.");
 
-  const venueName = "The Brewery Recording Studio";
-  const venueAddress = "910 Grand St, Brooklyn, NY 11211";
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueName + ", " + venueAddress)}`;
-
+  const html = buildLocationRevealHtml();
   const recipients = getAllRsvps().filter(r => (r.status === "going" || r.status === "maybe") && r.email);
-
-  const html = `
-    <div style="background:#050505;color:#F0EDE8;font-family:Arial,sans-serif;padding:0;margin:0;">
-      <div style="background:#E8501A;color:#050505;padding:28px 32px;font-size:24px;font-weight:bold;letter-spacing:1px;">
-        YOU'RE EXPECTED.
-      </div>
-      <div style="padding:32px;">
-        <p style="font-size:18px;font-weight:bold;margin-bottom:4px;">${venueName}</p>
-        <p style="font-size:15px;color:#8F8F8F;margin-bottom:24px;">${venueAddress}</p>
-        <p style="font-size:15px;line-height:1.6;">Doors open 6pm. Sharp. Don't be late.</p>
-        <a href="${mapsUrl}" style="display:inline-block;background:#E8501A;color:#050505;padding:14px 28px;text-decoration:none;font-weight:bold;letter-spacing:1px;margin-top:24px;">GET DIRECTIONS →</a>
-        <p style="margin-top:36px;font-size:12px;color:#8F8F8F;">Better Left Unsaid 2 · Mali V · All Flights Delayed</p>
-      </div>
-    </div>`;
 
   let sent = 0;
   recipients.forEach(r => {
@@ -416,6 +491,8 @@ function sendLocationReveal() {
     });
     if (res.getResponseCode() < 300) sent++;
   });
+
+  PropertiesService.getScriptProperties().setProperty("LOCATION_REVEALED", "true");
 
   return `Location reveal sent to ${sent}/${recipients.length} guest(s).`;
 }

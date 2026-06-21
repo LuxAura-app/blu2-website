@@ -230,6 +230,57 @@ nav {
 }
 .rsvp-counter strong { color: var(--orange); font-weight: 600; }
 
+/* ── FIND MY RSVP ── */
+.lookup-section { text-align: center; padding: 0 24px 28px; }
+.lookup-toggle {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  cursor: pointer;
+  min-height: 44px;
+}
+.lookup-toggle:hover { color: var(--orange); }
+.lookup-panel {
+  max-width: 420px;
+  margin: 16px auto 0;
+  background: var(--panel);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  padding: 24px;
+  text-align: left;
+}
+.lookup-panel[hidden] { display: none; }
+.lookup-row { display: flex; gap: 8px; }
+.lookup-row input {
+  flex: 1;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  color: var(--off-white);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  padding: 10px 12px;
+  min-height: 44px;
+}
+.lookup-row button {
+  background: var(--orange);
+  color: var(--black);
+  border: none;
+  padding: 0 18px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  min-height: 44px;
+}
+.lookup-result { margin-top: 16px; font-size: 14px; line-height: 1.6; color: var(--off-white); }
+.lookup-result .venue { color: var(--orange); font-weight: 600; }
+
 /* ── FORM SECTION ── */
 .rsvp-form-section { padding: 40px 24px 100px; }
 .rsvp-panel {
@@ -466,6 +517,17 @@ table.admin-table th { color: var(--muted); font-size: 11px; letter-spacing: 0.1
 </section>
 
 <p class="rsvp-counter" id="rsvp-counter-text"><strong>0</strong> people are coming to the listening party</p>
+
+<div class="lookup-section">
+  <button class="lookup-toggle" id="lookup-toggle">Already RSVP'd? Find your details →</button>
+  <div class="lookup-panel" id="lookup-panel" hidden>
+    <div class="lookup-row">
+      <input type="email" id="lookup-email" placeholder="Email you RSVP'd with" autocomplete="email"/>
+      <button id="lookup-submit">Find</button>
+    </div>
+    <div class="lookup-result" id="lookup-result"></div>
+  </div>
+</div>
 
 <section class="rsvp-form-section">
   <div class="rsvp-panel" id="rsvp-panel">
@@ -737,6 +799,57 @@ form.addEventListener("submit", e => {
 
   document.getElementById("form-view").hidden = true;
   document.getElementById("confirm-view").hidden = false;
+});
+
+/* ── FIND MY RSVP ── */
+function openLookup() {
+  document.getElementById("lookup-panel").hidden = false;
+  document.getElementById("lookup-email").focus();
+}
+document.getElementById("lookup-toggle").addEventListener("click", () => {
+  const panel = document.getElementById("lookup-panel");
+  panel.hidden = !panel.hidden;
+  if (!panel.hidden) document.getElementById("lookup-email").focus();
+});
+
+async function runLookup() {
+  const email = document.getElementById("lookup-email").value.trim();
+  const resultEl = document.getElementById("lookup-result");
+  if (!email) { resultEl.textContent = "Enter the email you RSVP'd with."; return; }
+  if (!SHEET_WEBHOOK_URL || SHEET_WEBHOOK_URL.startsWith("PASTE_")) {
+    resultEl.textContent = "Lookup isn't configured yet.";
+    return;
+  }
+
+  resultEl.textContent = "Looking…";
+  try {
+    const res = await fetch(`${SHEET_WEBHOOK_URL}?type=lookup&email=${encodeURIComponent(email)}`);
+    const data = await res.json();
+
+    if (!data.found) {
+      resultEl.textContent = "We don't see an RSVP under that email. Double-check it, or RSVP above.";
+      return;
+    }
+
+    const statusCopy = { going: "I'm There", maybe: "Maybe", cantmake: "Can't Make It" }[data.status] || data.status;
+    let html = `You're down as <strong>${statusCopy}</strong> for ${data.eventLabel}, ${data.eventTime}.`;
+    if (data.venueRevealed) {
+      html += `<br/><br/><span class="venue">${data.venueName}</span><br/>${data.venueAddress}<br/>${data.doors}`;
+    } else {
+      html += `<br/><br/>Location details go out June 26th — the day before the event. Check back here after that if you lose the email or text.`;
+    }
+    resultEl.innerHTML = html;
+  } catch (err) {
+    resultEl.textContent = "Couldn't reach the server. Try again in a bit.";
+  }
+}
+document.getElementById("lookup-submit").addEventListener("click", runLookup);
+document.getElementById("lookup-email").addEventListener("keydown", e => {
+  if (e.key === "Enter") runLookup();
+});
+if (window.location.hash === "#lookup") openLookup();
+window.addEventListener("hashchange", () => {
+  if (window.location.hash === "#lookup") openLookup();
 });
 
 /* ── ADMIN DASHBOARD ── */
