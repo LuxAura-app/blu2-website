@@ -68,7 +68,7 @@ button, a { touch-action: manipulation; }
   object-fit: cover;
   object-position: center center;
   z-index: -2;
-  filter: brightness(0.65) saturate(0.95) hue-rotate(-10deg);
+  filter: brightness(0.78) saturate(1) hue-rotate(-10deg);
 }
 .rsvp-video-bg img {
   width: 100%;
@@ -428,6 +428,10 @@ table.admin-table th { color: var(--muted); font-size: 11px; letter-spacing: 0.1
   .field-row { flex-direction: column; gap: 0; }
   .rsvp-panel { padding: 32px 22px; }
   nav { padding: 18px 20px; }
+  .countdown-units { flex-wrap: nowrap; }
+  .countdown-unit { flex: 1; padding: 0 6px; min-width: 0; }
+  .countdown-num { font-size: clamp(24px, 8vw, 34px); }
+  .countdown-label { font-size: 9px; letter-spacing: 0.12em; }
 }
 </style>
 </head>
