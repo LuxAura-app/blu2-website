@@ -13,6 +13,12 @@ const ADMIN_PASS     = "maliv2026"; // must match ADMIN_PASS in index.html and r
 const TRACK_COUNT    = 13;
 const EVENT_LABEL    = "BLU2 Listening Party — Saturday, June 27, 2026";
 
+// EVENT LOCATION: The Brewery Recording Studio, 910 Grand St, Brooklyn, NY 11211
+// EVENT TIME: 6pm - 11pm (sharp start)
+// REVEAL DATE: June 26, 2026 — send to all confirmed "Going" RSVPs
+// Withheld from the RSVP page and the confirmation email until sendLocationReveal()
+// is run on June 26 — see that function below.
+
 /**
  * Called by the site on login, vote submission, and RSVP submission.
  *
@@ -288,6 +294,9 @@ function emailRsvpGuest(entry) {
       ? "No pressure — you're on the list as a maybe. Lock it in any time before June 27th at the link below."
       : "We'll miss you this time. BLU2 streams everywhere July 1st — don't miss the album.";
 
+  const locationNote = "Location details will be sent to you on June 26th — the day before the event. Make sure you're watching your inbox and texts.";
+  const showLocationNote = isGoing || entry.status === "maybe";
+
   const html = `
     <div style="background:#050505;color:#F0EDE8;font-family:Arial,sans-serif;padding:0;margin:0;">
       <div style="background:#E8501A;color:#050505;padding:28px 32px;font-size:24px;font-weight:bold;letter-spacing:1px;">
@@ -295,6 +304,7 @@ function emailRsvpGuest(entry) {
       </div>
       <div style="padding:32px;">
         <p style="font-size:15px;line-height:1.6;">${bodyCopy}</p>
+        ${showLocationNote ? `<p style="font-size:14px;line-height:1.6;color:#E8501A;">${locationNote}</p>` : ""}
         <table style="margin:24px 0;font-size:14px;color:#8F8F8F;">
           <tr><td style="padding:4px 12px 4px 0;">Event</td><td style="color:#F0EDE8;">${EVENT_LABEL}</td></tr>
           <tr><td style="padding:4px 12px 4px 0;">Artist</td><td style="color:#F0EDE8;">Mali V</td></tr>
@@ -309,7 +319,7 @@ function emailRsvpGuest(entry) {
   GmailApp.sendEmail(
     entry.email,
     isGoing ? "You're locked in. BLU2 Listening Party — June 27" : "BLU2 Listening Party — RSVP received",
-    bodyCopy,
+    showLocationNote ? `${bodyCopy}\n\n${locationNote}` : bodyCopy,
     { htmlBody: html, name: "Mali V" }
   );
 }
@@ -353,6 +363,62 @@ function addToResendContacts(data) {
     }),
     muteHttpExceptions: true
   });
+}
+
+/**
+ * The June 26 location reveal — emails the venue/time to everyone who
+ * RSVP'd "going" or "maybe", one day before the event. The address is
+ * intentionally hardcoded here rather than read from a constant, since
+ * this is the one function whose entire job is to reveal it.
+ *
+ * HOW TO RUN: open script.google.com → this project → select
+ * "sendLocationReveal" from the function dropdown in the toolbar →
+ * click Run. Do this on June 26th. Requires RESEND_API_KEY to be set
+ * in Project Settings → Script Properties, and a verified sending
+ * domain in the Resend dashboard.
+ */
+function sendLocationReveal() {
+  const apiKey = PropertiesService.getScriptProperties().getProperty("RESEND_API_KEY");
+  if (!apiKey) throw new Error("RESEND_API_KEY isn't set in Script Properties.");
+
+  const venueName = "The Brewery Recording Studio";
+  const venueAddress = "910 Grand St, Brooklyn, NY 11211";
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueName + ", " + venueAddress)}`;
+
+  const recipients = getAllRsvps().filter(r => (r.status === "going" || r.status === "maybe") && r.email);
+
+  const html = `
+    <div style="background:#050505;color:#F0EDE8;font-family:Arial,sans-serif;padding:0;margin:0;">
+      <div style="background:#E8501A;color:#050505;padding:28px 32px;font-size:24px;font-weight:bold;letter-spacing:1px;">
+        YOU'RE EXPECTED.
+      </div>
+      <div style="padding:32px;">
+        <p style="font-size:18px;font-weight:bold;margin-bottom:4px;">${venueName}</p>
+        <p style="font-size:15px;color:#8F8F8F;margin-bottom:24px;">${venueAddress}</p>
+        <p style="font-size:15px;line-height:1.6;">Doors open 6pm. Sharp. Don't be late.</p>
+        <a href="${mapsUrl}" style="display:inline-block;background:#E8501A;color:#050505;padding:14px 28px;text-decoration:none;font-weight:bold;letter-spacing:1px;margin-top:24px;">GET DIRECTIONS →</a>
+        <p style="margin-top:36px;font-size:12px;color:#8F8F8F;">Better Left Unsaid 2 · Mali V · All Flights Delayed</p>
+      </div>
+    </div>`;
+
+  let sent = 0;
+  recipients.forEach(r => {
+    const res = UrlFetchApp.fetch("https://api.resend.com/emails", {
+      method: "post",
+      contentType: "application/json",
+      headers: { "Authorization": `Bearer ${apiKey}` },
+      payload: JSON.stringify({
+        from: "Mali V <party@betterleftunsaid2.com>",
+        to: [r.email],
+        subject: "Tomorrow. Here's where to be.",
+        html: html
+      }),
+      muteHttpExceptions: true
+    });
+    if (res.getResponseCode() < 300) sent++;
+  });
+
+  return `Location reveal sent to ${sent}/${recipients.length} guest(s).`;
 }
 
 /**

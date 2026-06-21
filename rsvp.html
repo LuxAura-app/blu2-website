@@ -3,7 +3,7 @@
 <head>
 <!--
   VIDEO SETUP (done):
-  ./video/rose.mp4 is already in place.
+  ./video/Rose_new.mp4 is already in place.
   COVER IMAGE (done):
   ./img/BurningRosePic.jpeg — used as the <video> poster and as the
   fallback <img> if the browser can't play mp4.
@@ -74,6 +74,20 @@ button, a { touch-action: manipulation; }
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+.rsvp-mobile-bg {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background-image: url('./img/BurningRosePic.jpeg');
+  background-size: cover;
+  background-position: center center;
+  z-index: -2;
+  filter: brightness(0.35) saturate(0.8) hue-rotate(-10deg);
+}
+@media (max-width: 768px) {
+  .rsvp-video-bg { display: none; }
+  .rsvp-mobile-bg { display: block; }
 }
 .rsvp-page-overlay {
   position: fixed;
@@ -419,10 +433,11 @@ table.admin-table th { color: var(--muted); font-size: 11px; letter-spacing: 0.1
 </head>
 <body>
 
-<video class="rsvp-video-bg" autoplay muted loop playsinline poster="./img/BurningRosePic.jpeg">
-  <source src="./video/rose.mp4" type="video/mp4"/>
+<video class="rsvp-video-bg" autoplay muted loop playsinline preload="none" poster="./img/BurningRosePic.jpeg">
+  <source src="./video/Rose_new.mp4" type="video/mp4"/>
   <img src="./img/BurningRosePic.jpeg" alt="Better Left Unsaid 2"/>
 </video>
+<div class="rsvp-mobile-bg" aria-hidden="true"></div>
 <div class="rsvp-page-overlay"></div>
 
 <div class="rsvp-content">
