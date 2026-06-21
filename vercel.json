@@ -1,9 +1,16 @@
 {
   "version": 2,
   "builds": [
-    { "src": "index.html", "use": "@vercel/static" }
+    { "src": "index.html", "use": "@vercel/static" },
+    { "src": "rsvp.html", "use": "@vercel/static" },
+    { "src": "video/**", "use": "@vercel/static" },
+    { "src": "img/**", "use": "@vercel/static" }
   ],
   "routes": [
+    { "src": "/video/(.*)", "dest": "/video/$1" },
+    { "src": "/img/(.*)", "dest": "/img/$1" },
+    { "src": "/rsvp", "dest": "/rsvp.html" },
+    { "src": "/rsvp.html", "dest": "/rsvp.html" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

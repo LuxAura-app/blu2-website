@@ -56,6 +56,25 @@ the `SPREADSHEET_ID` / `openById` call so it can find the right sheet.
 2. Replace the placeholder with the Web App URL from step 2.6.
 3. Commit and push.
 
+## RSVP page (rsvp.html)
+
+`rsvp.html` posts to the same Web App with `{ type: "rsvp", ... }`. The
+script appends a row to a new `RSVP` sheet tab, upserts the `Contacts`
+row, and emails the guest a status-aware confirmation plus `ADMIN_EMAIL`
+a notification — both via `GmailApp`, so no third-party email API key
+is ever exposed in the static HTML.
+
+- **Admin → Sync All RSVPs (Cloud)**: calls `?pass=...&type=rsvp` and
+  merges every RSVP row into the admin dashboard at `rsvp.html#admin`.
+- **Reminders**: run `sendReminders(subject, message)` from the Apps
+  Script editor (or attach a time-driven trigger for June 24/26/27) to
+  email everyone who RSVP'd "going". Gmail's consumer send quota is
+  ~100/day.
+- **SMS**: not implemented. See the `TODO` comment above `sendReminders`
+  in `Code.gs` — Twilio needs a server-side secret, and this Apps
+  Script project is the safe place to hold it (Script Properties) once
+  there's a Twilio account.
+
 ## How it works
 
 - **On login**: the site `fetch()`s `{ type: "login", user }` to the Web
