@@ -63,7 +63,7 @@ button, a {
   to   { opacity: 1; transform: translateY(0); }
 }
 .screen.active { display: block; animation: screenIn 0.4s ease-out; }
-#login-screen.active, #thanks-screen.active { display: flex; }
+#login-screen.active, #thanks-screen.active, #vote-locked-screen.active { display: flex; }
 
 /* ── CONTENT WIDTH (large screens) ── */
 .vote-header, .vote-tracks, .vote-submit-area,
@@ -658,7 +658,7 @@ footer a:hover { color: var(--off-white); }
 /* ══════════════════════════════════
    THANKS SCREEN
 ══════════════════════════════════ */
-#thanks-screen {
+#thanks-screen, #vote-locked-screen {
   min-height: 100vh;
   flex-direction: column;
   justify-content: center;
@@ -843,7 +843,7 @@ footer a:hover { color: var(--off-white); }
   .vote-tracks { padding: 0 20px; }
   .vt-controls { padding-left: 0; }
   .vote-submit-area { padding: 48px 20px 80px; }
-  #thanks-screen { padding: 100px 20px 60px; }
+  #thanks-screen, #vote-locked-screen { padding: 100px 20px 60px; }
   #admin-screen { padding: 100px 20px 60px; }
   .tr-bar-wrap { display: none; }
 }
@@ -955,8 +955,8 @@ footer a:hover { color: var(--off-white); }
     <div class="social-links">
       <a href="https://instagram.com/mali__v" target="_blank">Instagram</a>
       <a href="https://youtube.com/@mali__v" target="_blank">YouTube</a>
-      <a href="https://twitter.com/mali__v" target="_blank">Twitter</a>
-      <a href="https://facebook.com/718mali" target="_blank">Facebook</a>
+      <!-- TODO: confirm real TikTok handle/URL -->
+      <a href="#" target="_blank">TikTok</a>
     </div>
     <p>betterleftunsaid2.com</p>
   </footer>
@@ -1004,6 +1004,17 @@ footer a:hover { color: var(--off-white); }
 <!-- ══════════════════════════════
      VOTE
 ══════════════════════════════ -->
+<div id="vote-locked-screen" class="screen">
+  <div class="thanks-eyebrow">Better Left Unsaid 2 · Listening Party</div>
+  <h2 class="thanks-title">Voting<br/>Opens<br/>June 27.</h2>
+  <p class="thanks-sub">
+    Track ratings open the night of the listening party — 6:00 PM, June 27, 2026.
+    Come back then to rate every track live in the room.
+  </p>
+  <button class="login-back" onclick="goHome()">← Back to site</button>
+  <button class="login-back" onclick="adminUnlockVoting()" style="margin-top:8px;opacity:0.5;">Admin testing? Unlock voting →</button>
+</div>
+
 <div id="vote-screen" class="screen">
 
   <div class="vote-header">
@@ -1109,6 +1120,14 @@ const VIBES = ["Hard","Smooth","Emotional","Anthem","Lowkey","Party","Cinematic"
 const ADMIN_PASS = "maliv2026";
 const LS_KEY = "blu2_responses";
 
+// Voting only opens once the listening party actually starts, so no one
+// can submit (and pollute the real count) by logging in early. Admin can
+// still test ahead of time via the "Admin testing?" link on the locked
+// screen, which sets votingUnlocked for the rest of this session.
+const VOTING_OPENS = new Date("2026-06-27T18:00:00");
+let votingUnlocked = false;
+function votingIsOpen() { return votingUnlocked || new Date() >= VOTING_OPENS; }
+
 // Google Apps Script Web App URL — see apps-script/SETUP.md to configure.
 // Each submission is posted here, which appends a row to the master Sheet
 // and emails a per-person CSV + PDF summary to titledtentatively@gmail.com.
@@ -1141,8 +1160,9 @@ function doLogout() {
 }
 
 function handleVoteNav() {
-  if (user) { show("vote-screen"); }
-  else { show("login-screen"); }
+  if (!user) { show("login-screen"); return; }
+  if (!votingIsOpen()) { show("vote-locked-screen"); return; }
+  show("vote-screen");
 }
 
 /* ────────────────────────────────────────────
@@ -1181,6 +1201,11 @@ function doLogin() {
 
   sendContactToCloud(user);
 
+  if (!votingIsOpen()) {
+    show("vote-locked-screen");
+    return;
+  }
+
   buildVoteTracks();
   show("vote-screen");
 
@@ -1196,6 +1221,23 @@ function adminPrompt() {
     buildAdmin();
     show("admin-screen");
   }
+}
+
+/* Lets the admin bypass the voting gate for last-minute testing,
+   from the "Admin testing?" link on the locked screen. */
+function adminUnlockVoting() {
+  const code = prompt("Admin access code:");
+  if (code === null) return;
+  if (code !== ADMIN_PASS) { alert("Incorrect code."); return; }
+
+  votingUnlocked = true;
+  buildVoteTracks();
+  show("vote-screen");
+
+  requestAnimationFrame(() => {
+    const firstTrack = document.getElementById("vt-1");
+    if (firstTrack) firstTrack.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 }
 
 /* ────────────────────────────────────────────

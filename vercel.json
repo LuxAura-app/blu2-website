@@ -7,6 +7,7 @@
     { "src": "img/**", "use": "@vercel/static" }
   ],
   "routes": [
+    { "src": "/index\\.html", "status": 301, "headers": { "Location": "/" }, "dest": "/" },
     { "src": "/video/(.*)", "dest": "/video/$1" },
     { "src": "/img/(.*)", "dest": "/img/$1" },
     { "src": "/rsvp", "dest": "/rsvp.html" },
