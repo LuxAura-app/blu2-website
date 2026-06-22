@@ -436,16 +436,19 @@ function getVenueInfo() {
 }
 
 /**
- * The June 26 location reveal — emails the venue/time to everyone who
- * RSVP'd "going" or "maybe", one day before the event. Also flips the
- * LOCATION_REVEALED script property so the website's "find my RSVP"
- * lookup starts surfacing the venue to guests who lost the email/text.
+ * The June 26 location reveal — emails AND texts (MMS, with album art
+ * attached) the venue to everyone who RSVP'd "going" or "maybe", one
+ * day before the event. Also flips the LOCATION_REVEALED script
+ * property so the website's "find my RSVP" lookup starts surfacing
+ * the venue to guests who lost the email/text.
  *
  * HOW TO RUN: open script.google.com → this project → select
  * "sendLocationReveal" from the function dropdown in the toolbar →
- * click Run. Do this on June 26th. Requires RESEND_API_KEY to be set
- * in Project Settings → Script Properties, and a verified sending
- * domain in the Resend dashboard.
+ * click Run. Do this on June 26th. Requires RESEND_API_KEY (email)
+ * and TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_PHONE_NUMBER
+ * (text) to be set in Project Settings → Script Properties. If the
+ * Twilio properties aren't set yet, texts are skipped silently and
+ * email still goes out.
  */
 function buildLocationRevealHtml() {
   const venue = getVenueInfo();
@@ -472,29 +475,39 @@ function sendLocationReveal() {
   const apiKey = PropertiesService.getScriptProperties().getProperty("RESEND_API_KEY");
   if (!apiKey) throw new Error("RESEND_API_KEY isn't set in Script Properties.");
 
+  const venue = getVenueInfo();
   const html = buildLocationRevealHtml();
-  const recipients = getAllRsvps().filter(r => (r.status === "going" || r.status === "maybe") && r.email);
+  const smsBody = `YOU'RE EXPECTED.\n${venue.name}\n${venue.address}\n${venue.doors}\n— Better Left Unsaid 2 · Mali V`;
+  const recipients = getAllRsvps().filter(r => r.status === "going" || r.status === "maybe");
 
-  let sent = 0;
+  let emailSent = 0, smsSent = 0, smsAttempted = 0;
   recipients.forEach(r => {
-    const res = UrlFetchApp.fetch("https://api.resend.com/emails", {
-      method: "post",
-      contentType: "application/json",
-      headers: { "Authorization": `Bearer ${apiKey}` },
-      payload: JSON.stringify({
-        from: "Mali V <party@betterleftunsaid2.com>",
-        to: [r.email],
-        subject: "Tomorrow. Here's where to be.",
-        html: html
-      }),
-      muteHttpExceptions: true
-    });
-    if (res.getResponseCode() < 300) sent++;
+    if (r.email) {
+      const res = UrlFetchApp.fetch("https://api.resend.com/emails", {
+        method: "post",
+        contentType: "application/json",
+        headers: { "Authorization": `Bearer ${apiKey}` },
+        payload: JSON.stringify({
+          from: "Mali V <party@betterleftunsaid2.com>",
+          to: [r.email],
+          subject: "Tomorrow. Here's where to be.",
+          html: html
+        }),
+        muteHttpExceptions: true
+      });
+      if (res.getResponseCode() < 300) emailSent++;
+    }
+
+    const phone = normalizePhoneE164(r.phone);
+    if (phone) {
+      smsAttempted++;
+      if (sendMms(phone, smsBody, ALBUM_ART_URL)) smsSent++;
+    }
   });
 
   PropertiesService.getScriptProperties().setProperty("LOCATION_REVEALED", "true");
 
-  return `Location reveal sent to ${sent}/${recipients.length} guest(s).`;
+  return `Location reveal: ${emailSent}/${recipients.length} emails, ${smsSent}/${smsAttempted} texts.`;
 }
 
 /**
@@ -513,10 +526,43 @@ function sendReminders(subject, message) {
 }
 
 /**
- * TODO — SMS reminders via Twilio.
- * Twilio's API requires a server-side secret (Account SID + Auth Token),
- * so it can't be called from rsvp.html directly. This Apps Script project
- * is already a safe place to hold that secret (Script Properties, not
- * source code) — add a sendSms(to, body) function here using
- * UrlFetchApp.fetch() against the Twilio REST API once an account exists.
+ * Converts a free-typed RSVP phone number to E.164 (+1XXXXXXXXXX) for
+ * Twilio. Returns null if it doesn't look like a valid US number —
+ * callers should skip sending rather than guess.
  */
+function normalizePhoneE164(phone) {
+  if (!phone) return null;
+  const raw = String(phone).trim();
+  if (raw.startsWith("+")) return raw;
+
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length === 10) return "+1" + digits;
+  if (digits.length === 11 && digits.startsWith("1")) return "+" + digits;
+  return null;
+}
+
+/**
+ * Sends an MMS (or SMS if mediaUrl is omitted) via Twilio. Reads
+ * TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_PHONE_NUMBER from
+ * Script Properties (Project Settings → Script Properties) — never
+ * from source code. No-ops (returns false) if those aren't set yet,
+ * so the rest of sendLocationReveal() still works email-only until
+ * Twilio is configured.
+ */
+function sendMms(to, body, mediaUrl) {
+  const sid = PropertiesService.getScriptProperties().getProperty("TWILIO_ACCOUNT_SID");
+  const token = PropertiesService.getScriptProperties().getProperty("TWILIO_AUTH_TOKEN");
+  const from = PropertiesService.getScriptProperties().getProperty("TWILIO_PHONE_NUMBER");
+  if (!sid || !token || !from) return false;
+
+  const payload = { To: to, From: from, Body: body };
+  if (mediaUrl) payload.MediaUrl = mediaUrl;
+
+  const res = UrlFetchApp.fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+    method: "post",
+    payload: payload,
+    headers: { "Authorization": "Basic " + Utilities.base64Encode(sid + ":" + token) },
+    muteHttpExceptions: true
+  });
+  return res.getResponseCode() < 300;
+}
