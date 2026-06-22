@@ -344,7 +344,7 @@ function buildRsvpGuestHtml(entry) {
 
   return `
     <div style="background:#050505;color:#F0EDE8;font-family:Arial,sans-serif;padding:0;margin:0;max-width:600px;">
-      <img src="${ALBUM_ART_URL}" alt="Better Left Unsaid 2" width="600" style="width:100%;max-width:600px;height:220px;object-fit:cover;display:block;filter:saturate(0.9);"/>
+      <img src="${ALBUM_ART_URL}" alt="Better Left Unsaid 2" width="600" draggable="false" oncontextmenu="return false;" style="width:100%;max-width:600px;height:220px;object-fit:cover;object-position:center 80%;display:block;filter:saturate(0.9);pointer-events:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;"/>
       <div style="background:#E8501A;color:#050505;padding:24px 32px;font-size:24px;font-weight:bold;letter-spacing:1px;border-bottom:4px solid #050505;">
         ${headline}
       </div>
@@ -453,7 +453,7 @@ function buildLocationRevealHtml() {
 
   return `
     <div style="background:#050505;color:#F0EDE8;font-family:Arial,sans-serif;padding:0;margin:0;max-width:600px;">
-      <img src="${ALBUM_ART_URL}" alt="Better Left Unsaid 2" width="600" style="width:100%;max-width:600px;height:220px;object-fit:cover;display:block;filter:saturate(0.9);"/>
+      <img src="${ALBUM_ART_URL}" alt="Better Left Unsaid 2" width="600" draggable="false" oncontextmenu="return false;" style="width:100%;max-width:600px;height:220px;object-fit:cover;object-position:center 80%;display:block;filter:saturate(0.9);pointer-events:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;"/>
       <div style="background:#E8501A;color:#050505;padding:24px 32px;font-size:24px;font-weight:bold;letter-spacing:1px;border-bottom:4px solid #050505;">
         YOU'RE EXPECTED.
       </div>
