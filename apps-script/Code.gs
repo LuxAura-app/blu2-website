@@ -27,8 +27,8 @@ const ALBUM_ART_URL  = "https://www.betterleftunsaid2.com/img/BurningRosePic.jpe
  * - `{ type: "login", user }` — upserts the contact into the Contacts
  *   sheet for future email/text marketing. No email is sent.
  * - `{ type: "rsvp", ... }` — appends a row to the RSVP sheet, upserts the
- *   contact, and emails the guest a confirmation plus ADMIN_EMAIL a
- *   notification.
+ *   contact, emails the guest a confirmation (and texts one too, if a
+ *   phone was given), and emails ADMIN_EMAIL a notification.
  * - Vote submissions (default) — append a row to the Responses sheet,
  *   upsert the contact, and email the voter's results as a CSV + PDF
  *   attachment to ADMIN_EMAIL.
@@ -45,6 +45,7 @@ function doPost(e) {
     appendRsvpRow(entry);
     upsertContact({ first: entry.firstName, last: entry.lastName, email: entry.email, phone: entry.phone }, "RSVP");
     emailRsvpGuest(entry);
+    smsRsvpGuest(entry);
     emailRsvpAdmin(entry);
     addToResendContacts(entry);
     return jsonOut({ ok: true });
@@ -381,6 +382,31 @@ function emailRsvpGuest(entry) {
   );
 }
 
+/**
+ * The initial RSVP confirmation text — mirrors emailRsvpGuest(): no
+ * venue address here, just a confirmation and a heads-up that the
+ * location follows on June 26th. Sent as an MMS (album art attached)
+ * for the same look-and-feel as the day-before reveal text. No-ops
+ * silently if the guest's phone doesn't normalize or Twilio isn't
+ * configured yet (see sendMms()).
+ */
+function smsRsvpGuest(entry) {
+  const phone = normalizePhoneE164(entry.phone);
+  if (!phone) return;
+
+  const isGoing = entry.status === "going";
+  const showLocationNote = isGoing || entry.status === "maybe";
+  const bodyCopy = isGoing
+    ? "You're locked in. BLU2 Listening Party — June 27."
+    : entry.status === "maybe"
+      ? "No pressure — you're on the list as a maybe for June 27."
+      : "We'll miss you this time. BLU2 streams everywhere July 1st.";
+  const locationNote = "Location details come June 26th, the day before.";
+
+  const body = `${bodyCopy}${showLocationNote ? " " + locationNote : ""}\n— Better Left Unsaid 2 · Mali V\nReply STOP to opt out.`;
+  sendMms(phone, body, ALBUM_ART_URL);
+}
+
 function emailRsvpAdmin(entry) {
   GmailApp.sendEmail(
     ADMIN_EMAIL,
@@ -477,7 +503,7 @@ function sendLocationReveal() {
 
   const venue = getVenueInfo();
   const html = buildLocationRevealHtml();
-  const smsBody = `YOU'RE EXPECTED.\n${venue.name}\n${venue.address}\n${venue.doors}\n— Better Left Unsaid 2 · Mali V`;
+  const smsBody = `YOU'RE EXPECTED.\n${venue.name}\n${venue.address}\n${venue.doors}\n— Better Left Unsaid 2 · Mali V\nReply STOP to opt out.`;
   const recipients = getAllRsvps().filter(r => r.status === "going" || r.status === "maybe");
 
   let emailSent = 0, smsSent = 0, smsAttempted = 0;
