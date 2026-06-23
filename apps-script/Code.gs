@@ -568,20 +568,22 @@ function normalizePhoneE164(phone) {
 }
 
 /**
- * Sends an MMS (or SMS if mediaUrl is omitted) via Twilio. Reads
- * TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_PHONE_NUMBER from
- * Script Properties (Project Settings → Script Properties) — never
- * from source code. No-ops (returns false) if those aren't set yet,
- * so the rest of sendLocationReveal() still works email-only until
- * Twilio is configured.
+ * Sends an MMS (or SMS if mediaUrl is omitted) via Twilio, through the
+ * Messaging Service (handles the verified toll-free number, opt-out
+ * keywords, etc. on Twilio's side — no raw From number needed). Reads
+ * TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_MESSAGING_SERVICE_SID
+ * from Script Properties (Project Settings → Script Properties) —
+ * never from source code. No-ops (returns false) if those aren't set
+ * yet, so the rest of sendLocationReveal() still works email-only
+ * until Twilio is configured.
  */
 function sendMms(to, body, mediaUrl) {
   const sid = PropertiesService.getScriptProperties().getProperty("TWILIO_ACCOUNT_SID");
   const token = PropertiesService.getScriptProperties().getProperty("TWILIO_AUTH_TOKEN");
-  const from = PropertiesService.getScriptProperties().getProperty("TWILIO_PHONE_NUMBER");
-  if (!sid || !token || !from) return false;
+  const messagingServiceSid = PropertiesService.getScriptProperties().getProperty("TWILIO_MESSAGING_SERVICE_SID");
+  if (!sid || !token || !messagingServiceSid) return false;
 
-  const payload = { To: to, From: from, Body: body };
+  const payload = { To: to, MessagingServiceSid: messagingServiceSid, Body: body };
   if (mediaUrl) payload.MediaUrl = mediaUrl;
 
   const res = UrlFetchApp.fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
