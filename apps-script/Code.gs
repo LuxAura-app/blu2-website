@@ -742,8 +742,8 @@ function buildAlbumReleaseHtml() {
   });
 }
 
-/** Sends one album-release email to `email` via Resend. Returns the HTTPResponse. */
-function sendOneAlbumRelease(email, apiKey, html, subject) {
+/** Sends one newsletter email to `email` via Resend. Returns the HTTPResponse. */
+function sendOneNewsletterEmail(email, apiKey, html, subject) {
   return UrlFetchApp.fetch("https://api.resend.com/emails", {
     method: "post",
     contentType: "application/json",
@@ -768,7 +768,7 @@ function sendAlbumReleaseEmail() {
   let sent = 0, failed = 0;
 
   recipients.forEach(email => {
-    if (sendOneAlbumRelease(email, apiKey, html, ALBUM_RELEASE_SUBJECT).getResponseCode() < 300) sent++;
+    if (sendOneNewsletterEmail(email, apiKey, html, ALBUM_RELEASE_SUBJECT).getResponseCode() < 300) sent++;
     else failed++;
   });
 
@@ -788,7 +788,7 @@ function sendAlbumReleaseTest(email) {
   if (!apiKey) throw new Error("RESEND_API_KEY isn't set in Script Properties.");
 
   const to = email || "rushell.mg@gmail.com";
-  const res = sendOneAlbumRelease(to, apiKey, buildAlbumReleaseHtml(), "[TEST] " + ALBUM_RELEASE_SUBJECT);
+  const res = sendOneNewsletterEmail(to, apiKey, buildAlbumReleaseHtml(), "[TEST] " + ALBUM_RELEASE_SUBJECT);
   const code = res.getResponseCode();
 
   // Log Resend's full response so failures are diagnosable. The usual
@@ -858,6 +858,104 @@ function checkAlbumReleaseReadiness() {
   const report = lines.join("\n");
   Logger.log(report);
   return report;
+}
+
+/* ════════════════════════════════════════════
+   VOTING INVITE — "the room is open" blast to RSVP invitees
+
+   A one-tap email to everyone who RSVP'd: hit the link, land on
+   betterleftunsaid2.com, sign in, and rate every track live during the
+   listening party. Reuses buildNewsletterEmailHtml() and the Resend
+   channel. Send it the night of the event (voting opens 6 PM ET,
+   June 27) by running sendVotingInviteEmail() from the editor.
+═══════════════════════════════════════════ */
+
+const VOTING_INVITE_SUBJECT = "The room is open. Rate every track — tonight.";
+
+/** The voting-invite email body — shared by the real blast and the test send. */
+function buildVotingInviteHtml() {
+  return buildNewsletterEmailHtml({
+    preheader: "The room is open — sign in and rate every track live with Mali V.",
+    eyebrow: "Listening Party · June 27, 2026",
+    headline: "THE ROOM IS OPEN.",
+    intro: "Tonight, <strong>Better Left Unsaid 2</strong> plays in full — and you're in the room. Hit the button below, sign in, and rate every track live as it drops.",
+    paragraphs: [
+      "Your ratings and vibes shape the night. Mali V is watching the room in real time, so make every track count.",
+      "One tap gets you in — see you inside."
+    ],
+    ctaLabel: "Enter the Room →",
+    ctaUrl: SITE_URL,
+    facts: [
+      ["Event", "BLU2 Listening Party"],
+      ["Date", "Saturday, June 27, 2026"],
+      ["Time", "7:00 PM – 11:00 PM"],
+      ["Artist", "Mali V"]
+    ],
+    footerTagline: "Better Left Unsaid 2 · Mali V · All Flights Delayed"
+  });
+}
+
+/**
+ * Every unique email from the RSVP sheet — the invitee list for the
+ * "enter the room" blast. Deduped case-insensitively; header and blanks
+ * skipped. Includes all RSVP statuses (going / maybe / can't make it),
+ * since they all asked to be on the list.
+ */
+function getAllRsvpEmails() {
+  const seen = {};
+  const emails = [];
+  getAllRsvps().forEach(r => {
+    const email = String(r.email || "").trim();
+    const key = email.toLowerCase();
+    if (!email || !key.includes("@") || seen[key]) return;
+    seen[key] = true;
+    emails.push(email);
+  });
+  return emails;
+}
+
+/**
+ * Blasts the "the room is open" voting invite to every RSVP invitee via
+ * Resend. Run this from the editor the night of the listening party.
+ * Requires RESEND_API_KEY in Script Properties and a verified sender
+ * domain (same setup as sendAlbumReleaseEmail).
+ */
+function sendVotingInviteEmail() {
+  const apiKey = PropertiesService.getScriptProperties().getProperty("RESEND_API_KEY");
+  if (!apiKey) throw new Error("RESEND_API_KEY isn't set in Script Properties.");
+
+  const html = buildVotingInviteHtml();
+  const recipients = getAllRsvpEmails();
+  let sent = 0, failed = 0;
+
+  recipients.forEach(email => {
+    if (sendOneNewsletterEmail(email, apiKey, html, VOTING_INVITE_SUBJECT).getResponseCode() < 300) sent++;
+    else failed++;
+  });
+
+  const summary = `Voting invite email: ${sent} sent, ${failed} failed, ${recipients.length} RSVP invitees.`;
+  Logger.log(summary);
+  return summary;
+}
+
+/**
+ * One-off test send of the voting invite (subject prefixed [TEST]) to a
+ * single address. Defaults to rushell.mg@gmail.com; pass an email to
+ * override. Logs Resend's full response so failures are diagnosable.
+ */
+function sendVotingInviteTest(email) {
+  const apiKey = PropertiesService.getScriptProperties().getProperty("RESEND_API_KEY");
+  if (!apiKey) throw new Error("RESEND_API_KEY isn't set in Script Properties.");
+
+  const to = email || "rushell.mg@gmail.com";
+  const res = sendOneNewsletterEmail(to, apiKey, buildVotingInviteHtml(), "[TEST] " + VOTING_INVITE_SUBJECT);
+  const code = res.getResponseCode();
+
+  const summary =
+    `Test voting-invite email to ${to}: HTTP ${code} (${code < 300 ? "sent" : "FAILED"}).\n` +
+    `Resend response: ${res.getContentText()}`;
+  Logger.log(summary);
+  return summary;
 }
 
 /**

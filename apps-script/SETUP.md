@@ -141,6 +141,23 @@ needs `RESEND_API_KEY` set and the sender domain verified.
 If you edit `Code.gs`, push it live with `clasp` (see below) so the
 trigger runs the updated code.
 
+## Voting invite — "the room is open" blast to RSVP invitees
+
+`sendVotingInviteEmail()` emails everyone who RSVP'd a one-tap invite to
+enter the room and rate every track live during the listening party. It
+reuses `buildNewsletterEmailHtml()` and the Resend channel; the CTA links
+to `https://www.betterleftunsaid2.com`, where they sign in and vote
+(voting unlocks at 6 PM ET on June 27).
+
+- **Recipients:** every unique email in the `RSVP` sheet (`getAllRsvpEmails`),
+  all statuses, deduped.
+- **Send it:** the night of the event, run `sendVotingInviteEmail` from the
+  Apps Script editor's function dropdown. Requires `RESEND_API_KEY` and the
+  verified sender domain (same setup as the album release).
+- **Test first:** run `sendVotingInviteTest` (defaults to
+  `rushell.mg@gmail.com`; or `sendVotingInviteTest("you@example.com")`).
+  It logs Resend's full response so any failure is diagnosable.
+
 ## How it works
 
 - **On login**: the site `fetch()`s `{ type: "login", user }` to the Web
