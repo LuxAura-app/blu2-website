@@ -75,6 +75,64 @@ is ever exposed in the static HTML.
   Script project is the safe place to hold it (Script Properties) once
   there's a Twilio account.
 
+## Newsletter — album release email (July 1, 2026)
+
+`buildNewsletterEmailHtml()` is a reusable, on-brand HTML email template
+(black canvas, orange headline band, burning-rose hero, bulletproof CTA,
+socials footer) that matches `index.html` / `rsvp.html`. Reuse it for any
+future campaign by passing a different content object — only the copy
+changes, never the markup.
+
+`sendAlbumReleaseEmail()` is the first campaign: the "Better Left Unsaid 2
+is out" announcement, blasted to the **entire Contacts list** via Resend
+(same channel as `sendLocationReveal`). It uses Resend's
+`{{RESEND_UNSUBSCRIBE}}` token + `List-Unsubscribe` header for one-click
+opt-out (CAN-SPAM compliant).
+
+**Prerequisite:** `RESEND_API_KEY` must be set in **Project Settings →
+Script Properties** (already required by `sendLocationReveal`), and the
+`party@betterleftunsaid2.com` sender domain must be verified in Resend.
+
+### Schedule the July 1 send (late morning, not midnight)
+
+The blast is timed for **11:00 AM Eastern on July 1, 2026** — late
+morning, so it lands when the list is awake and checking their inbox
+rather than sleeping through a midnight send (project timezone is
+`America/New_York`).
+
+**Option A — one click (recommended).** In the Apps Script editor, select
+`createAlbumReleaseTrigger` from the function dropdown and click **Run**.
+That installs a one-time time-based trigger at 11:00 AM ET on July 1,
+2026. Re-running it is safe — it removes any prior album-release trigger
+first, so you won't double-send. Verify under **Triggers** (the clock
+icon in the left rail). To shift the time, edit the `new Date(2026, 6, 1,
+11, 0, 0)` hour in `createAlbumReleaseTrigger` and run it again.
+
+**Option B — manual UI.** Apps Script editor → **Triggers** (clock icon)
+→ **Add Trigger**:
+- Function: `sendAlbumReleaseEmail`
+- Deployment: Head
+- Event source: **Time-driven**
+- Type: **Specific date and time**
+- Date/time: `2026-07-01 11:00` (interpreted in the project timezone,
+  America/New_York)
+
+> Apps Script time-driven triggers fire within a short window (typically a
+> few minutes) of the scheduled time, not to the exact second — fine for a
+> release-day blast.
+
+### Test send first
+
+Run `sendAlbumReleaseTest` from the editor's function dropdown — it
+delivers the exact album-release email (subject prefixed `[TEST]`) to a
+single address so you can preview rendering, the CTA, and the unsubscribe
+footer. It defaults to `rushell.mg@gmail.com`; to send elsewhere, call
+`sendAlbumReleaseTest("someone@example.com")`. This hits Resend, so it
+needs `RESEND_API_KEY` set and the sender domain verified.
+
+If you edit `Code.gs`, push it live with `clasp` (see below) so the
+trigger runs the updated code.
+
 ## How it works
 
 - **On login**: the site `fetch()`s `{ type: "login", user }` to the Web

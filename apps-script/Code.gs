@@ -14,6 +14,14 @@ const TRACK_COUNT    = 14;
 const EVENT_LABEL    = "BLU2 Listening Party — Saturday, June 27, 2026";
 const EVENT_TIME     = "6:00 PM – 11:00 PM";
 const ALBUM_ART_URL  = "https://www.betterleftunsaid2.com/img/BurningRosePic.jpeg";
+const SITE_URL       = "https://www.betterleftunsaid2.com";
+const BUY_URL        = "https://untitled.app"; // "Buy Album" link used across index.html / rsvp.html
+const FROM_ADDRESS   = "Mali V <party@betterleftunsaid2.com>"; // verified Resend sender
+const UNSUBSCRIBE_MAILTO = "mailto:party@betterleftunsaid2.com?subject=unsubscribe";
+const SOCIALS        = {
+  instagram: "https://instagram.com/mali__v",
+  youtube:   "https://youtube.com/@mali__v"
+};
 
 // EVENT LOCATION: The Brewery Recording Studio, 910 Grand St, Brooklyn, NY 11211
 // EVENT TIME: 6pm - 11pm (sharp start)
@@ -549,6 +557,268 @@ function sendReminders(subject, message) {
     GmailApp.sendEmail(r.email, subject, message, { name: "Mali V" });
   });
   return `Sent to ${going.length} guest(s).`;
+}
+
+/* ════════════════════════════════════════════
+   NEWSLETTER — reusable HTML email + album release blast
+
+   buildNewsletterEmailHtml() is a generic, on-brand email template
+   that matches the BLU2 website design system (index.html / rsvp.html):
+   black canvas (#050505), orange accent (#E8501A), off-white body
+   (#F0EDE8), the burning-rose hero image, an all-caps orange headline
+   band, a bulletproof CTA button, an optional facts table, and a
+   socials footer. Pass it an options object and reuse it for any future
+   campaign (tour dates, single drops, merch, etc.) — only the content
+   changes, never the markup.
+
+   sendAlbumReleaseEmail() is the first concrete campaign: the
+   "Better Left Unsaid 2 is out" announcement, blasted to the whole
+   Contacts marketing list via Resend on July 1, 2026. See SETUP.md for
+   the midnight-trigger instructions.
+═══════════════════════════════════════════ */
+
+/**
+ * Renders a reusable, design-system-matched HTML newsletter email.
+ * All styling is inline + table-based for email-client compatibility
+ * (Gmail strips <style> blocks and CSS variables), but the palette,
+ * type treatment, and voice mirror the website exactly.
+ *
+ * @param {Object} opts
+ * @param {string} opts.headline    Big all-caps orange band, e.g. "IT'S HERE."
+ * @param {string} [opts.eyebrow]   Small uppercase label above the body, e.g. "OUT NOW · JULY 1, 2026"
+ * @param {string} [opts.preheader] Hidden inbox-preview text (recommended)
+ * @param {string} opts.intro       Lead paragraph (plain text or simple inline HTML)
+ * @param {string[]} [opts.paragraphs] Additional body paragraphs
+ * @param {string} [opts.ctaLabel]  Button text, e.g. "STREAM / BUY NOW →"
+ * @param {string} [opts.ctaUrl]    Button link
+ * @param {Array<[string,string]>} [opts.facts] Rows for the info table, [label, value]
+ * @param {string} [opts.imageUrl]  Hero image (defaults to the album art)
+ * @param {string} [opts.footerTagline] Small orange uppercase sign-off
+ * @returns {string} Full HTML email body
+ */
+function buildNewsletterEmailHtml(opts) {
+  const o = opts || {};
+  const imageUrl = o.imageUrl || ALBUM_ART_URL;
+  const eyebrow = o.eyebrow || "";
+  const preheader = o.preheader || "";
+  const intro = o.intro || "";
+  const paragraphs = o.paragraphs || [];
+  const facts = o.facts || [];
+  const footerTagline = o.footerTagline || "Better Left Unsaid 2 · Mali V · All Flights Delayed";
+
+  const paraStyle = "font-size:15px;line-height:1.7;color:#F0EDE8;margin:0 0 16px;";
+
+  const eyebrowHtml = eyebrow
+    ? `<p style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#E8501A;margin:0 0 16px;">${eyebrow}</p>`
+    : "";
+
+  const introHtml = intro ? `<p style="${paraStyle}">${intro}</p>` : "";
+
+  const paragraphsHtml = paragraphs.map(p => `<p style="${paraStyle}">${p}</p>`).join("");
+
+  // Bulletproof, table-based CTA button (renders in Outlook + Gmail).
+  const ctaHtml = (o.ctaLabel && o.ctaUrl)
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 8px;">
+         <tr><td style="background:#E8501A;">
+           <a href="${o.ctaUrl}" target="_blank"
+              style="display:inline-block;padding:16px 36px;color:#050505;text-decoration:none;font-size:13px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;">${o.ctaLabel}</a>
+         </td></tr>
+       </table>`
+    : "";
+
+  const factsHtml = facts.length
+    ? `<table cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:28px 0 8px;font-size:14px;color:#8F8F8F;border-top:1px solid #181818;border-bottom:1px solid #181818;">
+         ${facts.map(([label, value]) => `<tr>
+           <td style="padding:10px 16px 10px 0;white-space:nowrap;">${label}</td>
+           <td style="padding:10px 0;color:#F0EDE8;text-align:right;">${value}</td>
+         </tr>`).join("")}
+       </table>`
+    : "";
+
+  // Hidden preheader: shows in the inbox preview line, not in the body.
+  const preheaderHtml = preheader
+    ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#050505;">${preheader}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>`
+    : "";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="color-scheme" content="dark"/></head>
+<body style="margin:0;padding:0;background:#050505;">
+  ${preheaderHtml}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#050505;">
+    <tr><td align="center" style="padding:24px 12px;">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;background:#0D0D0D;border:1px solid #181818;">
+
+        <!-- Hero image -->
+        <tr><td style="padding:0;">
+          <img src="${imageUrl}" alt="Better Left Unsaid 2" width="600"
+               style="width:100%;max-width:600px;height:220px;object-fit:cover;object-position:center 80%;display:block;border:0;filter:saturate(0.9);"/>
+        </td></tr>
+
+        <!-- Orange headline band -->
+        <tr><td style="background:#E8501A;color:#050505;padding:24px 32px;font-family:Arial,Helvetica,sans-serif;font-size:26px;font-weight:bold;letter-spacing:1px;line-height:1.05;text-transform:uppercase;border-bottom:4px solid #050505;">
+          ${o.headline || ""}
+        </td></tr>
+
+        <!-- Body -->
+        <tr><td style="padding:32px;font-family:Arial,Helvetica,sans-serif;">
+          ${eyebrowHtml}
+          ${introHtml}
+          ${paragraphsHtml}
+          ${ctaHtml}
+          ${factsHtml}
+          <p style="margin:36px 0 0;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#E8501A;">${footerTagline}</p>
+        </td></tr>
+
+        <!-- Footer / socials -->
+        <tr><td style="padding:24px 32px;border-top:1px solid #181818;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#8F8F8F;text-align:center;">
+          <a href="${SOCIALS.instagram}" target="_blank" style="color:#8F8F8F;text-decoration:none;margin:0 10px;">Instagram</a>
+          <a href="${SOCIALS.youtube}" target="_blank" style="color:#8F8F8F;text-decoration:none;margin:0 10px;">YouTube</a>
+          <a href="${SITE_URL}" target="_blank" style="color:#8F8F8F;text-decoration:none;margin:0 10px;">betterleftunsaid2.com</a>
+          <p style="margin:16px 0 0;color:#555;font-size:11px;">© 2026 All Flights Delayed · You're receiving this because you signed up at betterleftunsaid2.com.<br/><a href="${UNSUBSCRIBE_MAILTO}" style="color:#8F8F8F;">Unsubscribe</a></p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+/**
+ * Every unique email from the Contacts sheet (the marketing list built
+ * up by logins, votes, and RSVPs). Deduped case-insensitively, header
+ * and blanks skipped.
+ */
+function getAllContactEmails() {
+  const sheet = getContactsSheet();
+  const data = sheet.getDataRange().getValues();
+  const seen = {};
+  const emails = [];
+  for (let i = 1; i < data.length; i++) {
+    const email = String(data[i][2] || "").trim();
+    const key = email.toLowerCase();
+    if (!email || !key.includes("@") || seen[key]) continue;
+    seen[key] = true;
+    emails.push(email);
+  }
+  return emails;
+}
+
+/**
+ * Album release announcement — "Better Left Unsaid 2 is out."
+ *
+ * Blasts the on-brand newsletter to the entire Contacts marketing list
+ * via Resend (same channel as sendLocationReveal). Designed to be fired
+ * automatically by a time-driven trigger at midnight ET on July 1, 2026
+ * (see SETUP.md), but it's also safe to run by hand from the editor.
+ *
+ * Resend's List-Unsubscribe header + {{RESEND_UNSUBSCRIBE}} token handle
+ * one-click unsubscribe so the blast is CAN-SPAM compliant. Requires
+ * RESEND_API_KEY in Project Settings → Script Properties.
+ */
+const ALBUM_RELEASE_SUBJECT = "It's out. Better Left Unsaid 2 — everywhere now.";
+
+/** The album-release email body — shared by the real blast and the test send. */
+function buildAlbumReleaseHtml() {
+  return buildNewsletterEmailHtml({
+    preheader: "Better Left Unsaid 2 by Mali V is out everywhere. Press play.",
+    eyebrow: "Out Now · July 1, 2026",
+    headline: "IT'S OUT.",
+    intro: "No more waiting. <strong>Better Left Unsaid 2</strong> is out everywhere right now — 14 tracks, every word the title says we shouldn't.",
+    paragraphs: [
+      "You were in the room before anyone. Now it's yours to keep. Stream it, buy it, send it to the one person who needs to hear it.",
+      "Thank you for riding with Mali V from the jump. This one's for you."
+    ],
+    ctaLabel: "Stream / Buy Now →",
+    ctaUrl: BUY_URL,
+    facts: [
+      ["Album", "Better Left Unsaid 2"],
+      ["Artist", "Mali V"],
+      ["Tracks", "14"],
+      ["Released", "July 1, 2026"]
+    ],
+    footerTagline: "Better Left Unsaid 2 · Mali V · All Flights Delayed"
+  });
+}
+
+/** Sends one album-release email to `email` via Resend. Returns the HTTP status code. */
+function sendOneAlbumRelease(email, apiKey, html, subject) {
+  const res = UrlFetchApp.fetch("https://api.resend.com/emails", {
+    method: "post",
+    contentType: "application/json",
+    headers: { "Authorization": `Bearer ${apiKey}` },
+    payload: JSON.stringify({
+      from: FROM_ADDRESS,
+      to: [email],
+      subject: subject,
+      html: html,
+      headers: { "List-Unsubscribe": `<${UNSUBSCRIBE_MAILTO}>` }
+    }),
+    muteHttpExceptions: true
+  });
+  return res.getResponseCode();
+}
+
+function sendAlbumReleaseEmail() {
+  const apiKey = PropertiesService.getScriptProperties().getProperty("RESEND_API_KEY");
+  if (!apiKey) throw new Error("RESEND_API_KEY isn't set in Script Properties.");
+
+  const html = buildAlbumReleaseHtml();
+  const recipients = getAllContactEmails();
+  let sent = 0, failed = 0;
+
+  recipients.forEach(email => {
+    if (sendOneAlbumRelease(email, apiKey, html, ALBUM_RELEASE_SUBJECT) < 300) sent++;
+    else failed++;
+  });
+
+  const summary = `Album release email: ${sent} sent, ${failed} failed, ${recipients.length} contacts.`;
+  Logger.log(summary);
+  return summary;
+}
+
+/**
+ * One-off test send — delivers the exact album-release email (subject
+ * prefixed with [TEST]) to a single address so you can preview rendering,
+ * the CTA, and the unsubscribe footer before the real blast. Defaults to
+ * the address below; pass an email to override. Safe to run anytime.
+ */
+function sendAlbumReleaseTest(email) {
+  const apiKey = PropertiesService.getScriptProperties().getProperty("RESEND_API_KEY");
+  if (!apiKey) throw new Error("RESEND_API_KEY isn't set in Script Properties.");
+
+  const to = email || "rushell.mg@gmail.com";
+  const code = sendOneAlbumRelease(to, apiKey, buildAlbumReleaseHtml(), "[TEST] " + ALBUM_RELEASE_SUBJECT);
+
+  const summary = `Test album-release email to ${to}: HTTP ${code} (${code < 300 ? "sent" : "FAILED"}).`;
+  Logger.log(summary);
+  return summary;
+}
+
+/**
+ * One-shot helper to schedule sendAlbumReleaseEmail() for late morning
+ * (11:00 AM ET) on July 1, 2026 — not midnight, so the blast lands when
+ * the list is actually awake and checking their inbox. Run this ONCE from
+ * the editor any time before then. The script's timezone is
+ * America/New_York (appsscript.json), so the Date components below resolve
+ * to 11:00 AM Eastern on release day.
+ *
+ * Re-running it deletes any existing album-release trigger first, so
+ * it's safe to run twice without double-sending.
+ */
+function createAlbumReleaseTrigger() {
+  ScriptApp.getProjectTriggers().forEach(t => {
+    if (t.getHandlerFunction() === "sendAlbumReleaseEmail") ScriptApp.deleteTrigger(t);
+  });
+
+  const releaseSendTime = new Date(2026, 6, 1, 11, 0, 0); // July 1, 11:00 AM; month index 6; local = America/New_York
+  ScriptApp.newTrigger("sendAlbumReleaseEmail")
+    .timeBased()
+    .at(releaseSendTime)
+    .create();
+
+  return `Trigger set: sendAlbumReleaseEmail fires at ${releaseSendTime} (America/New_York).`;
 }
 
 /**
