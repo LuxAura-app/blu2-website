@@ -742,9 +742,9 @@ function buildAlbumReleaseHtml() {
   });
 }
 
-/** Sends one album-release email to `email` via Resend. Returns the HTTP status code. */
+/** Sends one album-release email to `email` via Resend. Returns the HTTPResponse. */
 function sendOneAlbumRelease(email, apiKey, html, subject) {
-  const res = UrlFetchApp.fetch("https://api.resend.com/emails", {
+  return UrlFetchApp.fetch("https://api.resend.com/emails", {
     method: "post",
     contentType: "application/json",
     headers: { "Authorization": `Bearer ${apiKey}` },
@@ -757,7 +757,6 @@ function sendOneAlbumRelease(email, apiKey, html, subject) {
     }),
     muteHttpExceptions: true
   });
-  return res.getResponseCode();
 }
 
 function sendAlbumReleaseEmail() {
@@ -769,7 +768,7 @@ function sendAlbumReleaseEmail() {
   let sent = 0, failed = 0;
 
   recipients.forEach(email => {
-    if (sendOneAlbumRelease(email, apiKey, html, ALBUM_RELEASE_SUBJECT) < 300) sent++;
+    if (sendOneAlbumRelease(email, apiKey, html, ALBUM_RELEASE_SUBJECT).getResponseCode() < 300) sent++;
     else failed++;
   });
 
@@ -789,9 +788,17 @@ function sendAlbumReleaseTest(email) {
   if (!apiKey) throw new Error("RESEND_API_KEY isn't set in Script Properties.");
 
   const to = email || "rushell.mg@gmail.com";
-  const code = sendOneAlbumRelease(to, apiKey, buildAlbumReleaseHtml(), "[TEST] " + ALBUM_RELEASE_SUBJECT);
+  const res = sendOneAlbumRelease(to, apiKey, buildAlbumReleaseHtml(), "[TEST] " + ALBUM_RELEASE_SUBJECT);
+  const code = res.getResponseCode();
 
-  const summary = `Test album-release email to ${to}: HTTP ${code} (${code < 300 ? "sent" : "FAILED"}).`;
+  // Log Resend's full response so failures are diagnosable. The usual
+  // cause of a 200 with no inbox delivery is an unverified sender domain:
+  // until betterleftunsaid2.com is verified in Resend, sends are
+  // restricted to the Resend account owner's own address, and anything
+  // else is rejected here with the reason in the body below.
+  const summary =
+    `Test album-release email to ${to}: HTTP ${code} (${code < 300 ? "sent" : "FAILED"}).\n` +
+    `Resend response: ${res.getContentText()}`;
   Logger.log(summary);
   return summary;
 }

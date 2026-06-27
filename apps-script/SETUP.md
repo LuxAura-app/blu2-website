@@ -77,6 +77,14 @@ is ever exposed in the static HTML.
 
 ## Newsletter — album release email (July 1, 2026)
 
+> **STATUS — armed.** A time-driven trigger is installed to run
+> `sendAlbumReleaseEmail` at **11:00 AM ET on July 1, 2026**, blasting the
+> full Contacts list. Confirmed via `checkAlbumReleaseReadiness`
+> (`Trigger armed: YES`, `Ready to send: YES`). The trigger is one-shot —
+> after it fires you can delete it from the Triggers tab. Do **not** run
+> `sendAlbumReleaseEmail` by hand before then unless you mean to send for
+> real.
+
 `buildNewsletterEmailHtml()` is a reusable, on-brand HTML email template
 (black canvas, orange headline band, burning-rose hero, bulletproof CTA,
 socials footer) that matches `index.html` / `rsvp.html`. Reuse it for any
