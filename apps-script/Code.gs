@@ -822,6 +822,38 @@ function createAlbumReleaseTrigger() {
 }
 
 /**
+ * One-click readiness check for the July 1 album-release blast. Logs (and
+ * returns) whether everything is in place so nothing silently no-ops on
+ * release day:
+ *   - RESEND_API_KEY present in Script Properties
+ *   - a time-based trigger for sendAlbumReleaseEmail is armed
+ *   - how many contacts the blast would reach
+ * Read-only — sends nothing and creates no triggers. Run it from the
+ * editor's function dropdown.
+ */
+function checkAlbumReleaseReadiness() {
+  const hasKey = !!PropertiesService.getScriptProperties().getProperty("RESEND_API_KEY");
+
+  const triggers = ScriptApp.getProjectTriggers()
+    .filter(t => t.getHandlerFunction() === "sendAlbumReleaseEmail");
+  const triggerArmed = triggers.length > 0;
+
+  const contactCount = getAllContactEmails().length;
+
+  const lines = [
+    "── Album release readiness ──",
+    `RESEND_API_KEY set:   ${hasKey ? "YES" : "NO  ← set it in Project Settings → Script Properties"}`,
+    `Trigger armed:        ${triggerArmed ? `YES (${triggers.length})` : "NO  ← run createAlbumReleaseTrigger"}`,
+    `Contacts to reach:    ${contactCount}`,
+    `Ready to send:        ${hasKey && triggerArmed && contactCount > 0 ? "YES ✅" : "NOT YET ⚠️"}`
+  ];
+
+  const report = lines.join("\n");
+  Logger.log(report);
+  return report;
+}
+
+/**
  * Converts a free-typed RSVP phone number to E.164 (+1XXXXXXXXXX) for
  * Twilio. Returns null if it doesn't look like a valid US number —
  * callers should skip sending rather than guess.
