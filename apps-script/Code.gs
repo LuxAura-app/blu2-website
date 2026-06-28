@@ -15,7 +15,7 @@ const EVENT_LABEL    = "BLU2 Listening Party — Saturday, June 27, 2026";
 const EVENT_TIME     = "7:00 PM – 11:00 PM";
 const ALBUM_ART_URL  = "https://www.betterleftunsaid2.com/img/BurningRosePic.jpeg";
 const SITE_URL       = "https://www.betterleftunsaid2.com";
-const BUY_URL        = "https://untitled.app"; // "Buy Album" link used across index.html / rsvp.html
+const BUY_URL        = "https://untitled.stream/buy/project/6fQNplBQZylpPL52wdcMQ"; // album checkout — matches the Buy links in index.html / rsvp.html
 const FROM_ADDRESS   = "Mali V <party@betterleftunsaid2.com>"; // verified Resend sender
 const UNSUBSCRIBE_MAILTO = "mailto:party@betterleftunsaid2.com?subject=unsubscribe";
 const SOCIALS        = {
