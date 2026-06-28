@@ -465,7 +465,8 @@ function getVenueInfo() {
   return {
     name: "The Brewery Recording Studio",
     address: "910 Grand St, Brooklyn, NY 11211",
-    doors: "Doors open 7pm. Sharp. Don't be late."
+    doors: "Doors open 7pm. Sharp. Don't be late.",
+    contact: "610-428-0493"
   };
 }
 
@@ -955,6 +956,87 @@ function sendVotingInviteTest(email) {
 
   const summary =
     `Test voting-invite email to ${to}: HTTP ${code} (${code < 300 ? "sent" : "FAILED"}).\n` +
+    `Resend response: ${res.getContentText()}`;
+  Logger.log(summary);
+  return summary;
+}
+
+/* ════════════════════════════════════════════
+   ARRIVAL INFO — "getting in" blast (directions + the door)
+
+   Sent the night of the event to everyone coming (going / maybe): how to
+   reach The Brewery Recording Studio, who to call if they can't find it,
+   and the door instruction (buzz Studio A). Reuses buildNewsletterEmailHtml()
+   and the Resend channel. Email-only — run sendArrivalInfoEmail() from the
+   editor.
+═══════════════════════════════════════════ */
+
+const ARRIVAL_INFO_SUBJECT = "Getting in tonight — directions + the door.";
+
+/** The arrival-info email body — shared by the real blast and the test send. */
+function buildArrivalInfoHtml() {
+  const venue = getVenueInfo();
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue.name + ", " + venue.address)}`;
+
+  return buildNewsletterEmailHtml({
+    preheader: "Getting to Better Left Unsaid 2 — directions, the door, and who to call.",
+    eyebrow: "Tonight · Listening Party",
+    headline: "GETTING IN.",
+    intro: `Heading to <strong>${venue.name}</strong> tonight? Here's everything you need to get through the door.`,
+    paragraphs: [
+      `Can't find the address, or running into any trouble on the way? Call or text <strong>${venue.contact}</strong> and we'll point you the right way.`,
+      "Once you reach the address, <strong>buzz Studio A</strong> and we'll let you in."
+    ],
+    ctaLabel: "Get Directions →",
+    ctaUrl: mapsUrl,
+    facts: [
+      ["Venue", venue.name],
+      ["Address", venue.address],
+      ["Doors", "7:00 PM"],
+      ["Questions?", venue.contact]
+    ],
+    footerTagline: "Better Left Unsaid 2 · Mali V · All Flights Delayed"
+  });
+}
+
+/**
+ * Blasts the arrival-info email to every guest who's coming (going /
+ * maybe) via Resend. Run from the editor the night of the event.
+ * Requires RESEND_API_KEY and a verified sender domain.
+ */
+function sendArrivalInfoEmail() {
+  const apiKey = PropertiesService.getScriptProperties().getProperty("RESEND_API_KEY");
+  if (!apiKey) throw new Error("RESEND_API_KEY isn't set in Script Properties.");
+
+  const html = buildArrivalInfoHtml();
+  const recipients = getAllRsvpEmails(["going", "maybe"]);
+  let sent = 0, failed = 0;
+
+  recipients.forEach(email => {
+    if (sendOneNewsletterEmail(email, apiKey, html, ARRIVAL_INFO_SUBJECT).getResponseCode() < 300) sent++;
+    else failed++;
+  });
+
+  const summary = `Arrival info email: ${sent} sent, ${failed} failed, ${recipients.length} going/maybe invitees.`;
+  Logger.log(summary);
+  return summary;
+}
+
+/**
+ * One-off test send of the arrival-info email (subject prefixed [TEST])
+ * to a single address. Defaults to rushell.mg@gmail.com; pass an email to
+ * override. Logs Resend's full response so failures are diagnosable.
+ */
+function sendArrivalInfoTest(email) {
+  const apiKey = PropertiesService.getScriptProperties().getProperty("RESEND_API_KEY");
+  if (!apiKey) throw new Error("RESEND_API_KEY isn't set in Script Properties.");
+
+  const to = email || "rushell.mg@gmail.com";
+  const res = sendOneNewsletterEmail(to, apiKey, buildArrivalInfoHtml(), "[TEST] " + ARRIVAL_INFO_SUBJECT);
+  const code = res.getResponseCode();
+
+  const summary =
+    `Test arrival-info email to ${to}: HTTP ${code} (${code < 300 ? "sent" : "FAILED"}).\n` +
     `Resend response: ${res.getContentText()}`;
   Logger.log(summary);
   return summary;

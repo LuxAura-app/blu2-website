@@ -158,6 +158,18 @@ to `https://www.betterleftunsaid2.com`, where they sign in and vote
   `rushell.mg@gmail.com`; or `sendVotingInviteTest("you@example.com")`).
   It logs Resend's full response so any failure is diagnosable.
 
+## Arrival info — "getting in" blast (directions + the door)
+
+`sendArrivalInfoEmail()` emails everyone coming (going / maybe) how to get
+into the listening party: the venue + address, a **Get Directions →** map
+link, who to call if they can't find it (`610-428-0493`, from
+`getVenueInfo().contact`), and the door instruction — **buzz Studio A**.
+Reuses `buildNewsletterEmailHtml()` and the Resend channel; email-only.
+
+- **Send it:** the night of the event, run `sendArrivalInfoEmail` from the
+  editor's function dropdown.
+- **Test first:** `sendArrivalInfoTest` (defaults to `rushell.mg@gmail.com`).
+
 ## How it works
 
 - **On login**: the site `fetch()`s `{ type: "login", user }` to the Web
