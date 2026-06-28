@@ -1008,7 +1008,7 @@ footer a:hover { color: var(--off-white); }
   <div class="thanks-eyebrow">Better Left Unsaid 2 · Listening Party</div>
   <h2 class="thanks-title">Voting<br/>Opens<br/>June 27.</h2>
   <p class="thanks-sub">
-    Track ratings open the night of the listening party — 6:00 PM, June 27, 2026.
+    Track ratings open the night of the listening party — 7:00 PM, June 27, 2026.
     Come back then to rate every track live in the room.
   </p>
   <button class="login-back" onclick="goHome()">← Back to site</button>
@@ -1125,7 +1125,7 @@ const LS_KEY = "blu2_responses";
 // can submit (and pollute the real count) by logging in early. Admin can
 // still test ahead of time via the "Admin testing?" link on the locked
 // screen, which sets votingUnlocked for the rest of this session.
-const VOTING_OPENS = new Date("2026-06-27T18:00:00");
+const VOTING_OPENS = new Date("2026-06-27T19:00:00");
 let votingUnlocked = false;
 function votingIsOpen() { return votingUnlocked || new Date() >= VOTING_OPENS; }
 

@@ -147,7 +147,7 @@ trigger runs the updated code.
 enter the room and rate every track live during the listening party. It
 reuses `buildNewsletterEmailHtml()` and the Resend channel; the CTA links
 to `https://www.betterleftunsaid2.com`, where they sign in and vote
-(voting unlocks at 6 PM ET on June 27).
+(voting unlocks at 7 PM ET on June 27).
 
 - **Recipients:** every unique email in the `RSVP` sheet (`getAllRsvpEmails`),
   all statuses, deduped.

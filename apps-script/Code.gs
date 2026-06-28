@@ -12,7 +12,7 @@ const ADMIN_EMAIL    = "titledtentatively@gmail.com";
 const ADMIN_PASS     = "maliv2026"; // must match ADMIN_PASS in index.html and rsvp.html
 const TRACK_COUNT    = 14;
 const EVENT_LABEL    = "BLU2 Listening Party — Saturday, June 27, 2026";
-const EVENT_TIME     = "6:00 PM – 11:00 PM";
+const EVENT_TIME     = "7:00 PM – 11:00 PM";
 const ALBUM_ART_URL  = "https://www.betterleftunsaid2.com/img/BurningRosePic.jpeg";
 const SITE_URL       = "https://www.betterleftunsaid2.com";
 const BUY_URL        = "https://untitled.app"; // "Buy Album" link used across index.html / rsvp.html
@@ -24,7 +24,7 @@ const SOCIALS        = {
 };
 
 // EVENT LOCATION: The Brewery Recording Studio, 910 Grand St, Brooklyn, NY 11211
-// EVENT TIME: 6pm - 11pm (sharp start)
+// EVENT TIME: 7pm - 11pm (sharp start)
 // REVEAL DATE: June 26, 2026 — send to all confirmed "Going" RSVPs
 // Withheld from the RSVP page and the confirmation email until sendLocationReveal()
 // is run on June 26 — see that function below.
@@ -465,7 +465,7 @@ function getVenueInfo() {
   return {
     name: "The Brewery Recording Studio",
     address: "910 Grand St, Brooklyn, NY 11211",
-    doors: "Doors open 6pm. Sharp. Don't be late."
+    doors: "Doors open 7pm. Sharp. Don't be late."
   };
 }
 
@@ -866,7 +866,7 @@ function checkAlbumReleaseReadiness() {
    A one-tap email to everyone who RSVP'd: hit the link, land on
    betterleftunsaid2.com, sign in, and rate every track live during the
    listening party. Reuses buildNewsletterEmailHtml() and the Resend
-   channel. Send it the night of the event (voting opens 6 PM ET,
+   channel. Send it the night of the event (voting opens 7 PM ET,
    June 27) by running sendVotingInviteEmail() from the editor.
 ═══════════════════════════════════════════ */
 
@@ -896,15 +896,16 @@ function buildVotingInviteHtml() {
 }
 
 /**
- * Every unique email from the RSVP sheet — the invitee list for the
- * "enter the room" blast. Deduped case-insensitively; header and blanks
- * skipped. Includes all RSVP statuses (going / maybe / can't make it),
- * since they all asked to be on the list.
+ * Unique RSVP emails, deduped case-insensitively (header and blanks
+ * skipped). Pass `statuses` (e.g. ["going", "maybe"]) to include only
+ * those RSVP statuses; omit it to include everyone.
  */
-function getAllRsvpEmails() {
+function getAllRsvpEmails(statuses) {
+  const allow = statuses ? statuses.map(s => String(s).toLowerCase()) : null;
   const seen = {};
   const emails = [];
   getAllRsvps().forEach(r => {
+    if (allow && allow.indexOf(String(r.status || "").toLowerCase()) === -1) return;
     const email = String(r.email || "").trim();
     const key = email.toLowerCase();
     if (!email || !key.includes("@") || seen[key]) return;
@@ -925,7 +926,8 @@ function sendVotingInviteEmail() {
   if (!apiKey) throw new Error("RESEND_API_KEY isn't set in Script Properties.");
 
   const html = buildVotingInviteHtml();
-  const recipients = getAllRsvpEmails();
+  // Only people who said they're coming — skip "can't make it" RSVPs.
+  const recipients = getAllRsvpEmails(["going", "maybe"]);
   let sent = 0, failed = 0;
 
   recipients.forEach(email => {
@@ -933,7 +935,7 @@ function sendVotingInviteEmail() {
     else failed++;
   });
 
-  const summary = `Voting invite email: ${sent} sent, ${failed} failed, ${recipients.length} RSVP invitees.`;
+  const summary = `Voting invite email: ${sent} sent, ${failed} failed, ${recipients.length} going/maybe invitees.`;
   Logger.log(summary);
   return summary;
 }
