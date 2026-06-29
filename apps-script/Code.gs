@@ -1042,6 +1042,84 @@ function sendArrivalInfoTest(email) {
   return summary;
 }
 
+/* ════════════════════════════════════════════
+   THANK YOU — post-event gratitude blast
+
+   Sent the morning after the listening party to everyone who came
+   ("going" RSVPs): appreciation for their time, energy, ears, and the
+   honest critiques that sharpen the work. Reuses buildNewsletterEmailHtml()
+   and the Resend channel; email-only. Run sendThankYouEmail() from the
+   editor.
+═══════════════════════════════════════════ */
+
+const THANK_YOU_SUBJECT = "Thank you for last night.";
+
+/** The thank-you email body — shared by the real blast and the test send. */
+function buildThankYouHtml() {
+  return buildNewsletterEmailHtml({
+    preheader: "From all of us — thank you for your time, your ears, and your honesty.",
+    eyebrow: "Better Left Unsaid 2 · Listening Party",
+    headline: "THANK YOU.",
+    intro: "From all of us — Mali V and the entire production team — thank you. Last night meant everything.",
+    paragraphs: [
+      "You gave us your time, your energy, and your ears. You sat with every track and told us the truth — the love and the critiques alike — and that honesty is exactly what sharpens us into better, more refined artists and a stronger production team.",
+      "<strong>Better Left Unsaid 2</strong> is sharper because you were in the room. We can't thank you enough for shaping it with us.",
+      "With nothing but love and gratitude — and we'll see you on release day."
+    ],
+    ctaLabel: "Get BLU2 — Out July 1 →",
+    ctaUrl: BUY_URL,
+    facts: [
+      ["Album", "Better Left Unsaid 2"],
+      ["Out", "July 1, 2026"],
+      ["Artist", "Mali V"]
+    ],
+    footerTagline: "Better Left Unsaid 2 · Mali V · All Flights Delayed"
+  });
+}
+
+/**
+ * Blasts the thank-you email to everyone who came (going RSVPs) via
+ * Resend. Run from the editor the morning after the event. Requires
+ * RESEND_API_KEY and a verified sender domain.
+ */
+function sendThankYouEmail() {
+  const apiKey = PropertiesService.getScriptProperties().getProperty("RESEND_API_KEY");
+  if (!apiKey) throw new Error("RESEND_API_KEY isn't set in Script Properties.");
+
+  const html = buildThankYouHtml();
+  const recipients = getAllRsvpEmails(["going"]);
+  let sent = 0, failed = 0;
+
+  recipients.forEach(email => {
+    if (sendOneNewsletterEmail(email, apiKey, html, THANK_YOU_SUBJECT).getResponseCode() < 300) sent++;
+    else failed++;
+  });
+
+  const summary = `Thank-you email: ${sent} sent, ${failed} failed, ${recipients.length} going invitees.`;
+  Logger.log(summary);
+  return summary;
+}
+
+/**
+ * One-off test send of the thank-you email (subject prefixed [TEST]) to a
+ * single address. Defaults to rushell.mg@gmail.com; pass an email to
+ * override. Logs Resend's full response so failures are diagnosable.
+ */
+function sendThankYouTest(email) {
+  const apiKey = PropertiesService.getScriptProperties().getProperty("RESEND_API_KEY");
+  if (!apiKey) throw new Error("RESEND_API_KEY isn't set in Script Properties.");
+
+  const to = email || "rushell.mg@gmail.com";
+  const res = sendOneNewsletterEmail(to, apiKey, buildThankYouHtml(), "[TEST] " + THANK_YOU_SUBJECT);
+  const code = res.getResponseCode();
+
+  const summary =
+    `Test thank-you email to ${to}: HTTP ${code} (${code < 300 ? "sent" : "FAILED"}).\n` +
+    `Resend response: ${res.getContentText()}`;
+  Logger.log(summary);
+  return summary;
+}
+
 /**
  * Converts a free-typed RSVP phone number to E.164 (+1XXXXXXXXXX) for
  * Twilio. Returns null if it doesn't look like a valid US number —

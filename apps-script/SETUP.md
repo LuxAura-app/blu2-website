@@ -170,6 +170,16 @@ Reuses `buildNewsletterEmailHtml()` and the Resend channel; email-only.
   editor's function dropdown.
 - **Test first:** `sendArrivalInfoTest` (defaults to `rushell.mg@gmail.com`).
 
+## Thank you — post-event gratitude blast
+
+`sendThankYouEmail()` emails everyone who came (`going` RSVPs) the morning
+after the listening party: appreciation for their time, energy, ears, and
+honest critiques, with a soft CTA to the album (out July 1). Reuses
+`buildNewsletterEmailHtml()` and the Resend channel; email-only.
+
+- **Send it:** run `sendThankYouEmail` from the editor's function dropdown.
+- **Test first:** `sendThankYouTest` (defaults to `rushell.mg@gmail.com`).
+
 ## How it works
 
 - **On login**: the site `fetch()`s `{ type: "login", user }` to the Web
