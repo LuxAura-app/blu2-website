@@ -15,7 +15,7 @@ const EVENT_LABEL    = "BLU2 Listening Party — Saturday, June 27, 2026";
 const EVENT_TIME     = "7:00 PM – 11:00 PM";
 const ALBUM_ART_URL  = "https://www.betterleftunsaid2.com/img/BurningRosePic.jpeg";
 const SITE_URL       = "https://www.betterleftunsaid2.com";
-const BUY_URL        = ""; // TODO: set new purchase-platform link (was untitled.stream). Empty = email CTA button is hidden until set. Must be set before the July 1 album-release email.
+const BUY_URL        = "https://maliv.bandcamp.com/album/blu-2"; // Bandcamp — stream + buy. Set July 1, 2026 after the platform change from untitled.stream.
 const FROM_ADDRESS   = "Mali V <party@betterleftunsaid2.com>"; // verified Resend sender
 const UNSUBSCRIBE_MAILTO = "mailto:party@betterleftunsaid2.com?subject=unsubscribe";
 const SOCIALS        = {
