@@ -718,20 +718,20 @@ function getAllContactEmails() {
  * one-click unsubscribe so the blast is CAN-SPAM compliant. Requires
  * RESEND_API_KEY in Project Settings → Script Properties.
  */
-const ALBUM_RELEASE_SUBJECT = "Here's the link — stream & buy Better Left Unsaid 2.";
+const ALBUM_RELEASE_SUBJECT = "Here's the link — download Better Left Unsaid 2 now.";
 
 /** The album-release email body — shared by the real blast and the test send. */
 function buildAlbumReleaseHtml() {
   return buildNewsletterEmailHtml({
-    preheader: "Better Left Unsaid 2 by Mali V is out everywhere. Press play.",
-    eyebrow: "Out Now · July 1, 2026",
-    headline: "IT'S OUT.",
-    intro: "No more waiting. <strong>Better Left Unsaid 2</strong> is out everywhere right now — 14 tracks, every word the title says we shouldn't.",
+    preheader: "Better Left Unsaid 2 by Mali V is available to download now.",
+    eyebrow: "Available to Download · July 1, 2026",
+    headline: "IT'S HERE.",
+    intro: "No more waiting. <strong>Better Left Unsaid 2</strong> is available to download right now — 14 tracks, every word the title says we shouldn't.",
     paragraphs: [
-      "You were in the room before anyone. Now it's yours to keep. Stream it, buy it, send it to the one person who needs to hear it.",
+      "You were in the room before anyone. Now it's yours to keep. Download it, own it, send it to the one person who needs to hear it.",
       "Thank you for riding with Mali V from the jump. This one's for you."
     ],
-    ctaLabel: "Stream / Buy Now →",
+    ctaLabel: "Download Now →",
     ctaUrl: BUY_URL,
     facts: [
       ["Album", "Better Left Unsaid 2"],
