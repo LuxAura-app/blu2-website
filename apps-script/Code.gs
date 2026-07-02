@@ -346,7 +346,7 @@ function buildRsvpGuestHtml(entry) {
     ? "Your RSVP is confirmed. Details on location and everything you need to know before June 27th are coming your way soon. Mali V can't wait to see you in the room."
     : entry.status === "maybe"
       ? "No pressure — you're on the list as a maybe. Lock it in any time before June 27th at the link below."
-      : "We'll miss you this time. BLU2 streams everywhere July 1st — don't miss the album.";
+      : "We'll miss you this time. Better Left Unsaid 2 is out now — download it on Bandcamp, streaming coming soon.";
 
   const locationNote = "Location details will be sent to you on June 26th — the day before the event. Make sure you're watching your inbox and texts. Lost the message? Head back to betterleftunsaid2.com/rsvp and look up your RSVP by email to pull it up again.";
   const showLocationNote = isGoing || entry.status === "maybe";
@@ -379,7 +379,7 @@ function emailRsvpGuest(entry) {
     ? "Your RSVP is confirmed. Details on location and everything you need to know before June 27th are coming your way soon. Mali V can't wait to see you in the room."
     : entry.status === "maybe"
       ? "No pressure — you're on the list as a maybe. Lock it in any time before June 27th at the link below."
-      : "We'll miss you this time. BLU2 streams everywhere July 1st — don't miss the album.";
+      : "We'll miss you this time. Better Left Unsaid 2 is out now — download it on Bandcamp, streaming coming soon.";
   const locationNote = "Location details will be sent to you on June 26th — the day before the event. Make sure you're watching your inbox and texts. Lost the message? Head back to betterleftunsaid2.com/rsvp and look up your RSVP by email to pull it up again.";
 
   GmailApp.sendEmail(
@@ -408,7 +408,7 @@ function smsRsvpGuest(entry) {
     ? "You're locked in. BLU2 Listening Party — June 27."
     : entry.status === "maybe"
       ? "No pressure — you're on the list as a maybe for June 27."
-      : "We'll miss you this time. BLU2 streams everywhere July 1st.";
+      : "We'll miss you this time. Better Left Unsaid 2 is out now — download it on Bandcamp, streaming coming soon.";
   const locationNote = "Location details come June 26th, the day before.";
 
   const body = `${bodyCopy}${showLocationNote ? " " + locationNote : ""}\n— Better Left Unsaid 2 · Mali V\nReply STOP to opt out.`;
