@@ -718,7 +718,7 @@ function getAllContactEmails() {
  * one-click unsubscribe so the blast is CAN-SPAM compliant. Requires
  * RESEND_API_KEY in Project Settings → Script Properties.
  */
-const ALBUM_RELEASE_SUBJECT = "It's out. Better Left Unsaid 2 — everywhere now.";
+const ALBUM_RELEASE_SUBJECT = "Here's the link — stream & buy Better Left Unsaid 2.";
 
 /** The album-release email body — shared by the real blast and the test send. */
 function buildAlbumReleaseHtml() {
