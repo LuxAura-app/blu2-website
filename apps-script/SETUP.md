@@ -75,7 +75,7 @@ is ever exposed in the static HTML.
   Script project is the safe place to hold it (Script Properties) once
   there's a Twilio account.
 
-## Newsletter — album release email (July 1, 2026)
+## Newsletter — mixtape release email (July 1, 2026)
 
 > **STATUS — armed.** A time-driven trigger is installed to run
 > `sendAlbumReleaseEmail` at **11:00 AM ET on July 1, 2026**, blasting the
@@ -111,7 +111,7 @@ rather than sleeping through a midnight send (project timezone is
 **Option A — one click (recommended).** In the Apps Script editor, select
 `createAlbumReleaseTrigger` from the function dropdown and click **Run**.
 That installs a one-time time-based trigger at 11:00 AM ET on July 1,
-2026. Re-running it is safe — it removes any prior album-release trigger
+2026. Re-running it is safe — it removes any prior mixtape-release trigger
 first, so you won't double-send. Verify under **Triggers** (the clock
 icon in the left rail). To shift the time, edit the `new Date(2026, 6, 1,
 11, 0, 0)` hour in `createAlbumReleaseTrigger` and run it again.
@@ -132,7 +132,7 @@ icon in the left rail). To shift the time, edit the `new Date(2026, 6, 1,
 ### Test send first
 
 Run `sendAlbumReleaseTest` from the editor's function dropdown — it
-delivers the exact album-release email (subject prefixed `[TEST]`) to a
+delivers the exact mixtape-release email (subject prefixed `[TEST]`) to a
 single address so you can preview rendering, the CTA, and the unsubscribe
 footer. It defaults to `rushell.mg@gmail.com`; to send elsewhere, call
 `sendAlbumReleaseTest("someone@example.com")`. This hits Resend, so it
@@ -153,7 +153,7 @@ to `https://www.betterleftunsaid2.com`, where they sign in and vote
   all statuses, deduped.
 - **Send it:** the night of the event, run `sendVotingInviteEmail` from the
   Apps Script editor's function dropdown. Requires `RESEND_API_KEY` and the
-  verified sender domain (same setup as the album release).
+  verified sender domain (same setup as the mixtape release).
 - **Test first:** run `sendVotingInviteTest` (defaults to
   `rushell.mg@gmail.com`; or `sendVotingInviteTest("you@example.com")`).
   It logs Resend's full response so any failure is diagnosable.
@@ -174,7 +174,7 @@ Reuses `buildNewsletterEmailHtml()` and the Resend channel; email-only.
 
 `sendThankYouEmail()` emails everyone who came (`going` RSVPs) the morning
 after the listening party: appreciation for their time, energy, ears, and
-honest critiques, with a soft CTA to the album (out July 1). Reuses
+honest critiques, with a soft CTA to the mixtape (out July 1). Reuses
 `buildNewsletterEmailHtml()` and the Resend channel; email-only.
 
 - **Send it:** run `sendThankYouEmail` from the editor's function dropdown.

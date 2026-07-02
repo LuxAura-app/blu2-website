@@ -1,5 +1,5 @@
 # Better Left Unsaid 2 — Mali V
-Official album landing page and listening party voting site.
+Official mixtape landing page and listening party voting site.
 Target domain: betterleftunsaid2.com
 Label: All Flights Delayed
 

@@ -364,7 +364,7 @@ function buildRsvpGuestHtml(entry) {
           <tr><td style="padding:6px 12px 6px 0;">Event</td><td style="color:#F0EDE8;">${EVENT_LABEL}</td></tr>
           <tr><td style="padding:6px 12px 6px 0;">Time</td><td style="color:#F0EDE8;">${EVENT_TIME}</td></tr>
           <tr><td style="padding:6px 12px 6px 0;">Artist</td><td style="color:#F0EDE8;">Mali V</td></tr>
-          <tr><td style="padding:6px 12px 6px 0;">Album</td><td style="color:#F0EDE8;">Better Left Unsaid 2</td></tr>
+          <tr><td style="padding:6px 12px 6px 0;">Mixtape</td><td style="color:#F0EDE8;">Better Left Unsaid 2</td></tr>
           <tr><td style="padding:6px 12px 6px 0;">Status</td><td style="color:#E8501A;">${statusLabel}</td></tr>
         </table>
         <p style="margin-top:36px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#E8501A;">All Flights Delayed · @mali__v · betterleftunsaid2.com</p>
@@ -393,7 +393,7 @@ function emailRsvpGuest(entry) {
 /**
  * The initial RSVP confirmation text — mirrors emailRsvpGuest(): no
  * venue address here, just a confirmation and a heads-up that the
- * location follows on June 26th. Sent as an MMS (album art attached)
+ * location follows on June 26th. Sent as an MMS (mixtape art attached)
  * for the same look-and-feel as the day-before reveal text. No-ops
  * silently if the guest's phone doesn't normalize or Twilio isn't
  * configured yet (see sendMms()).
@@ -471,7 +471,7 @@ function getVenueInfo() {
 }
 
 /**
- * The June 26 location reveal — emails AND texts (MMS, with album art
+ * The June 26 location reveal — emails AND texts (MMS, with mixtape art
  * attached) the venue to everyone who RSVP'd "going" or "maybe", one
  * day before the event. Also flips the LOCATION_REVEALED script
  * property so the website's "find my RSVP" lookup starts surfacing
@@ -561,7 +561,7 @@ function sendReminders(subject, message) {
 }
 
 /* ════════════════════════════════════════════
-   NEWSLETTER — reusable HTML email + album release blast
+   NEWSLETTER — reusable HTML email + mixtape release blast
 
    buildNewsletterEmailHtml() is a generic, on-brand email template
    that matches the BLU2 website design system (index.html / rsvp.html):
@@ -593,7 +593,7 @@ function sendReminders(subject, message) {
  * @param {string} [opts.ctaLabel]  Button text, e.g. "STREAM / BUY NOW →"
  * @param {string} [opts.ctaUrl]    Button link
  * @param {Array<[string,string]>} [opts.facts] Rows for the info table, [label, value]
- * @param {string} [opts.imageUrl]  Hero image (defaults to the album art)
+ * @param {string} [opts.imageUrl]  Hero image (defaults to the mixtape art)
  * @param {string} [opts.footerTagline] Small orange uppercase sign-off
  * @returns {string} Full HTML email body
  */
@@ -707,7 +707,7 @@ function getAllContactEmails() {
 }
 
 /**
- * Album release announcement — "Better Left Unsaid 2 is out."
+ * Mixtape release announcement — "Better Left Unsaid 2 is out."
  *
  * Blasts the on-brand newsletter to the entire Contacts marketing list
  * via Resend (same channel as sendLocationReveal). Designed to be fired
@@ -720,7 +720,7 @@ function getAllContactEmails() {
  */
 const ALBUM_RELEASE_SUBJECT = "Here's the link — download Better Left Unsaid 2 now.";
 
-/** The album-release email body — shared by the real blast and the test send. */
+/** The mixtape-release email body — shared by the real blast and the test send. */
 function buildAlbumReleaseHtml() {
   return buildNewsletterEmailHtml({
     preheader: "Better Left Unsaid 2 by Mali V is available to download now.",
@@ -734,7 +734,7 @@ function buildAlbumReleaseHtml() {
     ctaLabel: "Download Now →",
     ctaUrl: BUY_URL,
     facts: [
-      ["Album", "Better Left Unsaid 2"],
+      ["Mixtape", "Better Left Unsaid 2"],
       ["Artist", "Mali V"],
       ["Tracks", "14"],
       ["Released", "July 1, 2026"]
@@ -773,13 +773,13 @@ function sendAlbumReleaseEmail() {
     else failed++;
   });
 
-  const summary = `Album release email: ${sent} sent, ${failed} failed, ${recipients.length} contacts.`;
+  const summary = `Mixtape release email: ${sent} sent, ${failed} failed, ${recipients.length} contacts.`;
   Logger.log(summary);
   return summary;
 }
 
 /**
- * One-off test send — delivers the exact album-release email (subject
+ * One-off test send — delivers the exact mixtape-release email (subject
  * prefixed with [TEST]) to a single address so you can preview rendering,
  * the CTA, and the unsubscribe footer before the real blast. Defaults to
  * the address below; pass an email to override. Safe to run anytime.
@@ -798,7 +798,7 @@ function sendAlbumReleaseTest(email) {
   // restricted to the Resend account owner's own address, and anything
   // else is rejected here with the reason in the body below.
   const summary =
-    `Test album-release email to ${to}: HTTP ${code} (${code < 300 ? "sent" : "FAILED"}).\n` +
+    `Test mixtape-release email to ${to}: HTTP ${code} (${code < 300 ? "sent" : "FAILED"}).\n` +
     `Resend response: ${res.getContentText()}`;
   Logger.log(summary);
   return summary;
@@ -812,7 +812,7 @@ function sendAlbumReleaseTest(email) {
  * America/New_York (appsscript.json), so the Date components below resolve
  * to 11:00 AM Eastern on release day.
  *
- * Re-running it deletes any existing album-release trigger first, so
+ * Re-running it deletes any existing mixtape-release trigger first, so
  * it's safe to run twice without double-sending.
  */
 function createAlbumReleaseTrigger() {
@@ -830,7 +830,7 @@ function createAlbumReleaseTrigger() {
 }
 
 /**
- * One-click readiness check for the July 1 album-release blast. Logs (and
+ * One-click readiness check for the July 1 mixtape-release blast. Logs (and
  * returns) whether everything is in place so nothing silently no-ops on
  * release day:
  *   - RESEND_API_KEY present in Script Properties
@@ -849,7 +849,7 @@ function checkAlbumReleaseReadiness() {
   const contactCount = getAllContactEmails().length;
 
   const lines = [
-    "── Album release readiness ──",
+    "── Mixtape release readiness ──",
     `RESEND_API_KEY set:   ${hasKey ? "YES" : "NO  ← set it in Project Settings → Script Properties"}`,
     `Trigger armed:        ${triggerArmed ? `YES (${triggers.length})` : "NO  ← run createAlbumReleaseTrigger"}`,
     `Contacts to reach:    ${contactCount}`,
@@ -1069,7 +1069,7 @@ function buildThankYouHtml() {
     ctaLabel: "Get BLU2 — Out July 1 →",
     ctaUrl: BUY_URL,
     facts: [
-      ["Album", "Better Left Unsaid 2"],
+      ["Mixtape", "Better Left Unsaid 2"],
       ["Out", "July 1, 2026"],
       ["Artist", "Mali V"]
     ],
