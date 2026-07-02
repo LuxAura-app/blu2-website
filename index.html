@@ -898,7 +898,7 @@ footer a:hover { color: var(--off-white); }
     <span id="nav-user"></span>
     <button id="nav-logout" onclick="doLogout()" style="display:none;">Logout</button>
     <a href="https://maliv.bandcamp.com/album/blu-2" target="_blank">Buy</a>
-    <button id="nav-vote-btn" onclick="handleVoteNav()">Vote</button>
+    <button id="nav-vote-btn" onclick="handleVoteNav()">Review</button>
   </div>
 </nav>
 
@@ -923,17 +923,17 @@ footer a:hover { color: var(--off-white); }
     </div>
   </div>
 
-  <!-- LISTENING PARTY STRIP -->
+  <!-- RATE & REVIEW STRIP -->
   <div class="party-strip">
     <div>
-      <div class="party-label">Listening Party</div>
-      <div class="party-date-text">Saturday, June 27</div>
+      <div class="party-label">Rate &amp; Review</div>
+      <div class="party-date-text">Open Now · Ongoing</div>
     </div>
     <div class="party-divider"></div>
     <div class="party-desc">
-      Vote on every track live. Log in to access the exclusive survey and share your thoughts directly with Mali V.
+      You've heard it — now weigh in. Rate every track and leave your honest review. Your feedback shapes the artistry, content, and production coming out of All Flights Delayed.
     </div>
-    <button class="party-enter" onclick="handleVoteNav()">Enter the Room →</button>
+    <button class="party-enter" onclick="handleVoteNav()">Rate &amp; Review →</button>
   </div>
 
   <!-- TRACKLIST -->
@@ -967,8 +967,8 @@ footer a:hover { color: var(--off-white); }
 ══════════════════════════════ -->
 <div id="login-screen" class="screen">
   <div class="login-inner">
-    <div class="login-eyebrow">Listening Party · June 27, 2026</div>
-    <h2 class="login-title">Sign<br/>In to<br/>Vote</h2>
+    <div class="login-eyebrow">Rate &amp; Review · Better Left Unsaid 2</div>
+    <h2 class="login-title">Sign<br/>In to<br/>Review</h2>
 
     <div class="field-row">
       <div class="field">
@@ -991,7 +991,7 @@ footer a:hover { color: var(--off-white); }
 
     <div class="err-msg" id="login-err" role="alert">Please fill in all fields.</div>
 
-    <button class="login-submit" onclick="doLogin()">Enter & Vote →</button>
+    <button class="login-submit" onclick="doLogin()">Enter & Review →</button>
     <button class="login-back" onclick="goHome()">← Back to site</button>
 
     <!-- Hidden admin trigger -->
@@ -1005,11 +1005,11 @@ footer a:hover { color: var(--off-white); }
      VOTE
 ══════════════════════════════ -->
 <div id="vote-locked-screen" class="screen">
-  <div class="thanks-eyebrow">Better Left Unsaid 2 · Listening Party</div>
-  <h2 class="thanks-title">Voting<br/>Opens<br/>June 27.</h2>
+  <div class="thanks-eyebrow">Better Left Unsaid 2 · Rate &amp; Review</div>
+  <h2 class="thanks-title">Rate<br/>&amp;<br/>Review.</h2>
   <p class="thanks-sub">
-    Track ratings open the night of the listening party — 7:00 PM, June 27, 2026.
-    Come back then to rate every track live in the room.
+    The album's out — rate every track and leave your honest review.
+    Your feedback shapes the artistry, content, and production coming out of All Flights Delayed.
   </p>
   <button class="login-back" onclick="goHome()">← Back to site</button>
   <button class="login-back" onclick="adminUnlockVoting()" style="margin-top:8px;opacity:0.5;">Admin testing? Unlock voting →</button>
@@ -1018,7 +1018,7 @@ footer a:hover { color: var(--off-white); }
 <div id="vote-screen" class="screen">
 
   <div class="vote-header">
-    <div class="vote-eyebrow">Better Left Unsaid 2 · Listening Party</div>
+    <div class="vote-eyebrow">Better Left Unsaid 2 · Rate &amp; Review</div>
     <h2 class="vote-title">Rate<br/>Every<br/>Track</h2>
     <div class="progress-wrap">
       <div class="progress-bar-bg">
@@ -1033,7 +1033,7 @@ footer a:hover { color: var(--off-white); }
   </div>
 
   <div class="vote-submit-area">
-    <p class="submit-note">Rate at least 10 tracks to submit. Your votes go directly to Mali V.</p>
+    <p class="submit-note">Rate at least 10 tracks to submit. Your ratings and reviews go straight to Mali V and All Flights Delayed.</p>
     <button class="submit-btn" id="submit-btn" onclick="doSubmit()">Submit My Votes →</button>
     <div class="vote-err" id="vote-err" role="alert">Please rate at least 10 tracks before submitting.</div>
   </div>
@@ -1043,10 +1043,10 @@ footer a:hover { color: var(--off-white); }
      THANKS
 ══════════════════════════════ -->
 <div id="thanks-screen" class="screen">
-  <div class="thanks-eyebrow">Better Left Unsaid 2 · Listening Party 2026</div>
-  <h2 class="thanks-title">Your<br/>Vote<br/>Is In.</h2>
+  <div class="thanks-eyebrow">Better Left Unsaid 2 · Rate &amp; Review</div>
+  <h2 class="thanks-title">Your<br/>Review<br/>Is In.</h2>
   <p class="thanks-sub">
-    Thank you for being in the room. Your thoughts go directly to Mali V.
+    Thank you for the honest feedback. Your ratings and review help shape the artistry, content, and production coming out of All Flights Delayed.
     It's here — download Better Left Unsaid 2 below.
   </p>
   <div style="display:flex;gap:16px;flex-wrap:wrap;">
@@ -1121,13 +1121,11 @@ const VIBES = ["Hard","Smooth","Emotional","Anthem","Lowkey","Party","Cinematic"
 const ADMIN_PASS = "maliv2026";
 const LS_KEY = "blu2_responses";
 
-// Voting only opens once the listening party actually starts, so no one
-// can submit (and pollute the real count) by logging in early. Admin can
-// still test ahead of time via the "Admin testing?" link on the locked
-// screen, which sets votingUnlocked for the rest of this session.
-const VOTING_OPENS = new Date("2026-06-27T19:00:00");
-let votingUnlocked = false;
-function votingIsOpen() { return votingUnlocked || new Date() >= VOTING_OPENS; }
+// The listening party is over and the album is out — ratings & reviews are
+// now permanently open so anyone can weigh in after listening. (Previously
+// gated until the party start on 2026-06-27; kept open indefinitely now.)
+let votingUnlocked = true;
+function votingIsOpen() { return true; }
 
 // Google Apps Script Web App URL — see apps-script/SETUP.md to configure.
 // Each submission is posted here, which appends a row to the master Sheet
