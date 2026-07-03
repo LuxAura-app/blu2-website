@@ -58,8 +58,13 @@ burning-rose video + rising CSS embers behind the design) via headless Chrome
 
 ```bash
 npm i puppeteer-core ffmpeg-static ffprobe-static
-node build-story-video.js        # writes BLU2-LIVE-story.mp4 (1080x1920 H.264, ~9s)
+node build-story-video.js        # writes BLU2-LIVE-story.mp4 (1080x1920 H.264 + AAC, ~62s)
 ```
+
+The build muxes `Audio/Better Left Unsaid.wav` (trimmed to the clip length with a
+1s fade-in / 2s fade-out → AAC). That WAV is git-ignored (large; already embedded
+in the mp4) — keep a copy in `Audio/` locally to regenerate. Capture length =
+`RECORD_MS` in `build-story-video.js` (currently 62s).
 
 To tune it: rose prominence = `.rose-bg` opacity + `.rose-veil` in
 `story-video.html`; ember count/speed = the `embers-anim` script + `@keyframes

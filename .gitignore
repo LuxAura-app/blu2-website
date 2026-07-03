@@ -11,5 +11,8 @@ desktop.ini
 package.json
 package-lock.json
 
+# Source audio for the story video (large; already embedded in the mp4)
+Audio/
+
 # Claude local memory (not part of the site)
 memory/
