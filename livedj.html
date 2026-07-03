@@ -243,12 +243,17 @@
       radial-gradient(90% 70% at 70% 18%, rgba(232,80,26,0.24), rgba(232,80,26,0) 60%),
       linear-gradient(180deg, rgba(5,5,5,0) 48%, rgba(5,5,5,0.55) 100%);
   }
-  /* thin orange frame — matches the page accent, with a soft ember glow */
+  /* thin orange frame — matches the page accent, with a bright ember glow */
   .portrait-card::before {
     content: ''; position: absolute; inset: 0; z-index: 4; pointer-events: none;
     border: 1px solid var(--orange);
     border-radius: 18px;
-    box-shadow: 0 0 20px rgba(232,80,26,0.30), inset 0 0 26px rgba(232,80,26,0.08);
+    box-shadow:
+      0 0 6px rgba(232,80,26,0.95),
+      0 0 20px rgba(232,80,26,0.60),
+      0 0 46px rgba(232,80,26,0.40),
+      0 0 88px rgba(232,80,26,0.22),
+      inset 0 0 30px rgba(232,80,26,0.12);
   }
   .portrait-tag {
     position: absolute; left: 20px; bottom: 20px; z-index: 5;
