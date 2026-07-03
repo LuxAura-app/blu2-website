@@ -342,31 +342,8 @@
     text-transform: uppercase;
     color: var(--orange);
   }
-  .st-cta {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    margin-top: 34px;
-    padding: 30px 40px;
-    background: var(--orange);
-    color: var(--black);
-    font-size: 34px;
-    font-weight: 800;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    border-radius: 18px;
-    text-decoration: none;
-    box-shadow:
-      0 0 30px rgba(232,80,26,0.55),
-      0 0 80px rgba(232,80,26,0.28);
-  }
-  .st-cta .play {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 42px; height: 42px; border-radius: 50%;
-    background: var(--black); color: var(--orange);
-    font-size: 20px; padding-left: 4px;
-  }
+  /* Reserved empty band — leave room for your Instagram link sticker (CTA) */
+  .st-cta-space { margin-top: 30px; height: 104px; }
 
   /* ── SCREEN FIT ──
      Desktop keeps the fixed 1080×1350 canvas (also used for the PDF/PNG).
@@ -547,7 +524,7 @@
           <span class="st-time">7:00 PM · Live on Social</span>
         </div>
 
-        <a class="st-cta"><span class="play">▶</span> Tap to Watch Live</a>
+        <div class="st-cta-space" aria-hidden="true"></div>
 
         <div class="flyer-footer">
           <div class="handles">
