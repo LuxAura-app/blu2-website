@@ -19,11 +19,15 @@ C:\Users\Team Parkins\Projects\BLU2
   phone layout at ≤900px. Used to render the feed PDF/PNG (`/flyer`)
 - `story.html` — 1080×1920 (9:16) canvas used to render the Instagram Story
   image (`/story`)
+- `story-overlay.html` — transparent-background variant of the story, rendered
+  to a PNG and composited over the burning-rose video to make the Story **video**
 
-## BLU2 LIVE DJ session flyer (DJ SaintBeliev3 — Sun July 5, 7:00 PM)
+## BLU2 LIVE DJ session flyer (Saint Believ3 — Sun July 5, 7:00 PM)
 Web page: `livedj.html`. Shareable graphics:
 - `BLU2-LIVE-flyer.png` (2160×2700, 4:5) — **Instagram feed post**
-- `BLU2-LIVE-story.png` (2160×3840, 9:16) — **Instagram Story**
+- `BLU2-LIVE-story.png` (2160×3840, 9:16) — **Instagram Story (still)**
+- `BLU2-LIVE-story.mp4` (1080×1920, 9:16, H.264, ~10s) — **animated Instagram
+  Story** (burning-rose video + embers behind the design)
 - `BLU2-LIVE-flyer.pdf` (4:5) — print
 
 Both the web page and the flyer use the DJ photo at `img/SaintBeliev3-DJ.JPEG`
@@ -40,15 +44,33 @@ CHROME="/c/Program Files/Google/Chrome/Application/chrome.exe"
 "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars \
   --force-device-scale-factor=2 --window-size=1080,1350 \
   --screenshot="BLU2-LIVE-flyer.png" "file:///C:/Users/Team%20Parkins/Projects/BLU2/flyer.html"
-# 2x PNG for the IG Story (2160x3840, 9:16)
+# 2x PNG for the IG Story still (2160x3840, 9:16)
 "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars \
   --force-device-scale-factor=2 --window-size=1080,1920 \
   --screenshot="BLU2-LIVE-story.png" "file:///C:/Users/Team%20Parkins/Projects/BLU2/story.html"
 ```
 
-Edit event copy (date/time/handles) in `flyer.html`, `story.html`, and
-`livedj.html`. The countdown target lives in `livedj.html`
-(`new Date(2026, 6, 5, 19, 0, 0)`).
+### Animated Story video (`BLU2-LIVE-story.mp4`)
+Composites the burning-rose video behind a transparent render of the story.
+Needs a local ffmpeg (not committed): `npm i ffmpeg-static ffprobe-static`.
+
+```bash
+CHROME="/c/Program Files/Google/Chrome/Application/chrome.exe"
+FF="node_modules/ffmpeg-static/ffmpeg.exe"
+# 1) transparent overlay PNG
+"$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars \
+  --force-device-scale-factor=1 --window-size=1080,1920 --default-background-color=00000000 \
+  --screenshot="_story-overlay.png" "file:///C:/Users/Team%20Parkins/Projects/BLU2/story-overlay.html"
+# 2) composite rose video (background) + overlay -> 10s 1080x1920 H.264
+"$FF" -y -ss 4 -t 10 -i "video/Rose_new.mp4" -i "_story-overlay.png" \
+  -filter_complex "[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,eq=brightness=-0.05:saturation=1.2,setsar=1[bg];[bg][1:v]overlay=0:0,format=yuv420p[v]" \
+  -map "[v]" -r 30 -c:v libx264 -profile:v high -pix_fmt yuv420p -b:v 9M -movflags +faststart "BLU2-LIVE-story.mp4"
+rm -f _story-overlay.png
+```
+
+Edit event copy (date/time/handles) in `flyer.html`, `story.html`,
+`story-overlay.html`, and `livedj.html`. The countdown target lives in
+`livedj.html` (`new Date(2026, 6, 5, 19, 0, 0)`).
 
 ## To update track list
 Edit the TRACKS array in index.html around line 990.

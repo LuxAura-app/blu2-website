@@ -9,6 +9,7 @@
     { "src": "BLU2-LIVE-flyer.pdf", "use": "@vercel/static" },
     { "src": "BLU2-LIVE-flyer.png", "use": "@vercel/static" },
     { "src": "BLU2-LIVE-story.png", "use": "@vercel/static" },
+    { "src": "BLU2-LIVE-story.mp4", "use": "@vercel/static" },
     { "src": "video/**", "use": "@vercel/static" },
     { "src": "img/**", "use": "@vercel/static" }
   ],
@@ -28,6 +29,7 @@
     { "src": "/BLU2-LIVE-flyer.pdf", "dest": "/BLU2-LIVE-flyer.pdf" },
     { "src": "/BLU2-LIVE-flyer.png", "dest": "/BLU2-LIVE-flyer.png" },
     { "src": "/BLU2-LIVE-story.png", "dest": "/BLU2-LIVE-story.png" },
+    { "src": "/BLU2-LIVE-story.mp4", "dest": "/BLU2-LIVE-story.mp4" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

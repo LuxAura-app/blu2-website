@@ -6,5 +6,10 @@ node_modules/
 *.log
 desktop.ini
 
+# Local-only tooling for rendering the story video (ffmpeg-static, etc.)
+# Kept out of git so it doesn't alter the Vercel static build.
+package.json
+package-lock.json
+
 # Claude local memory (not part of the site)
 memory/
