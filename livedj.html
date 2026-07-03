@@ -308,7 +308,11 @@
 
   /* ── RESPONSIVE ── */
   @media (max-width: 900px) {
-    .hero { align-items: flex-start; min-height: auto; padding: 100px 22px 60px; }
+    .hero {
+      align-items: flex-start; min-height: auto; padding: 100px 22px 60px;
+      /* burning-rose still stands in for the video on mobile */
+      background: url("img/BurningRosePic.jpeg") center 20% / cover no-repeat;
+    }
     .hero-bg { display: none; } /* drop the burning-rose video on mobile */
     .hero-inner { grid-template-columns: 1fr; gap: 36px; }
     .portrait-card { max-width: 380px; margin: 0 auto; order: -1; width: 100%; }
