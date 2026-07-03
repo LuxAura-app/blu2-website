@@ -50,12 +50,14 @@
   /* ── LAYER 1: PORTRAIT / HERO IMAGE ── */
   .portrait-wrap {
     position: absolute;
-    inset: 0 0 auto 0;
-    height: 820px;
+    inset: 26px 26px auto 26px;
+    height: 800px;
+    border-radius: 28px;
     overflow: hidden;
     z-index: 1;
   }
-  .portrait {
+  .portrait,
+  .portrait-fallback {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -64,6 +66,9 @@
     object-position: center 28%;
     /* Duotone-lean toward the BLU2 palette */
     filter: contrast(1.06) saturate(0.85) brightness(0.92);
+    /* feather every edge so the portrait dissolves into the flyer background */
+    -webkit-mask-image: radial-gradient(132% 120% at 50% 42%, #000 56%, rgba(0,0,0,0) 100%);
+            mask-image: radial-gradient(132% 120% at 50% 42%, #000 56%, rgba(0,0,0,0) 100%);
   }
   /* Orange wash that ties any photo into the burning-rose theme */
   .portrait-wrap::before {
@@ -72,7 +77,7 @@
     inset: 0;
     background:
       radial-gradient(120% 90% at 72% 18%, rgba(232,80,26,0.42) 0%, rgba(232,80,26,0) 55%),
-      linear-gradient(180deg, rgba(5,5,5,0) 30%, rgba(5,5,5,0.35) 62%, var(--black) 99%);
+      linear-gradient(180deg, rgba(5,5,5,0) 22%, rgba(5,5,5,0.42) 56%, var(--black) 94%);
     mix-blend-mode: normal;
     z-index: 2;
   }
