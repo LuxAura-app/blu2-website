@@ -68,6 +68,30 @@
   .nav-right a.accent { color: var(--orange); }
   .nav-right a.accent:hover { color: var(--orange-hot); }
 
+  /* ── SOUND TOGGLE ── */
+  .sound-toggle {
+    position: fixed; right: 20px; bottom: 20px; z-index: 300;
+    display: inline-flex; align-items: center; gap: 11px;
+    padding: 12px 18px; border-radius: 40px;
+    background: rgba(13,13,13,0.82); border: 1px solid var(--border);
+    color: var(--muted); cursor: pointer;
+    font-family: inherit; font-size: 10px; font-weight: 600;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    transition: border-color 0.2s, color 0.2s, transform 0.12s ease-out;
+    min-height: 44px;
+  }
+  .sound-toggle:hover { border-color: var(--orange); color: var(--off-white); }
+  .sound-toggle:active { transform: scale(0.96); }
+  .sound-toggle.playing { color: var(--orange); border-color: var(--orange); }
+  .sound-toggle .eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 13px; }
+  .sound-toggle .eq i { width: 2.5px; height: 4px; background: currentColor; border-radius: 1px; }
+  .sound-toggle.playing .eq i { animation: eqbar 0.9s ease-in-out infinite; }
+  .sound-toggle.playing .eq i:nth-child(2) { animation-delay: 0.25s; }
+  .sound-toggle.playing .eq i:nth-child(3) { animation-delay: 0.5s; }
+  @keyframes eqbar { 0%,100% { height: 4px; } 50% { height: 13px; } }
+  @media (max-width: 480px) { .sound-toggle { right: 14px; bottom: 14px; padding: 11px 15px; } }
+
   /* ── HERO ── */
   .hero {
     position: relative;
@@ -128,6 +152,13 @@
   .eyebrow {
     font-size: 12px; letter-spacing: 0.34em; text-transform: uppercase;
     color: var(--muted); margin-bottom: 22px;
+    /* thin orange outline + dark shadow so it reads over the flame background */
+    -webkit-text-stroke: 0.5px rgba(255,150,70,0.9);
+    paint-order: stroke fill;
+    text-shadow:
+      0 0 2px rgba(45,12,0,0.95),
+      0 1px 6px rgba(0,0,0,0.9),
+      0 0 12px rgba(232,80,26,0.55);
   }
   .eyebrow b { color: var(--orange); font-weight: 600; }
 
@@ -453,6 +484,15 @@
   <p>betterleftunsaid2.com</p>
 </footer>
 
+<!-- Looping background track (0:00–1:14, fades in/out) -->
+<audio id="bg-track" loop preload="auto">
+  <source src="sound/blu2-loop.mp3" type="audio/mpeg"/>
+</audio>
+<button id="sound-toggle" class="sound-toggle" aria-label="Toggle sound" aria-pressed="false">
+  <span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>
+  <span class="lbl">Sound Off</span>
+</button>
+
 <script>
   /* ── Rising embers ── */
   (function () {
@@ -500,6 +540,37 @@
       setTimeout(tick, 1000);
     }
     tick();
+  })();
+
+  /* ── Looping background track + sound toggle ── */
+  (function () {
+    var audio = document.getElementById('bg-track');
+    var btn = document.getElementById('sound-toggle');
+    if (!audio || !btn) return;
+    var lbl = btn.querySelector('.lbl');
+    var on = false;
+    function setUI() {
+      btn.classList.toggle('playing', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      lbl.textContent = on ? 'Sound On' : 'Sound Off';
+    }
+    function play() {
+      var p = audio.play();
+      if (p && p.then) p.then(function () { on = true; setUI(); }).catch(function () { on = false; setUI(); });
+      else { on = true; setUI(); }
+    }
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (on) { audio.pause(); on = false; setUI(); } else { play(); }
+    });
+    // Browsers block autoplay with sound — start on the first tap anywhere.
+    function firstGesture(e) {
+      if (btn.contains(e.target)) return;   // the button handles its own clicks
+      if (!on) play();
+      document.removeEventListener('pointerdown', firstGesture);
+    }
+    document.addEventListener('pointerdown', firstGesture);
+    setUI();
   })();
 </script>
 </body>

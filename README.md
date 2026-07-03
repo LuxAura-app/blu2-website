@@ -14,7 +14,9 @@ C:\Users\Team Parkins\Projects\BLU2
 ## Pages
 - `index.html` — main mixtape landing + Rate & Review voting (`/`)
 - `rsvp.html` — RSVP flow (`/rsvp`)
-- `livedj.html` — **BLU2 LIVE** DJ session landing page (`/live` or `/livedj`)
+- `livedj.html` — **BLU2 LIVE** DJ session landing page (`/live` or `/livedj`).
+  Has a looping background track (`sound/blu2-loop.mp3`) with a sound toggle
+  (starts on first tap — browsers block autoplay with sound).
 - `flyer.html` — still-flyer canvas (1080×1350, 4:5); also serves a fluid 9:16
   phone layout at ≤900px. Used to render the feed PDF/PNG (`/flyer`)
 - `story.html` — 1080×1920 (9:16) canvas used to render the Instagram Story
@@ -65,6 +67,17 @@ The build muxes `Audio/Better Left Unsaid.wav` (trimmed to the clip length with 
 1s fade-in / 2s fade-out → AAC). That WAV is git-ignored (large; already embedded
 in the mp4) — keep a copy in `Audio/` locally to regenerate. Capture length =
 `RECORD_MS` in `build-story-video.js` (currently 62s).
+
+### Live-page loop track (`sound/blu2-loop.mp3`)
+The looping track on `livedj.html` is the first 1:14 of the same source, with a
+fade-in / fade-out so the loop point isn't abrupt. Regenerate from the WAV:
+
+```bash
+FF="node_modules/ffmpeg-static/ffmpeg.exe"
+"$FF" -y -t 74 -i "Audio/Better Left Unsaid.wav" \
+  -af "afade=t=in:st=0:d=2.5,afade=t=out:st=70.5:d=3.5" \
+  -c:a libmp3lame -b:a 160k -ar 44100 "sound/blu2-loop.mp3"
+```
 
 To tune it: rose prominence = `.rose-bg` opacity + `.rose-veil` in
 `story-video.html`; ember count/speed = the `embers-anim` script + `@keyframes

@@ -11,12 +11,14 @@
     { "src": "BLU2-LIVE-story.png", "use": "@vercel/static" },
     { "src": "BLU2-LIVE-story.mp4", "use": "@vercel/static" },
     { "src": "video/**", "use": "@vercel/static" },
-    { "src": "img/**", "use": "@vercel/static" }
+    { "src": "img/**", "use": "@vercel/static" },
+    { "src": "sound/**", "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "/index\\.html", "status": 301, "headers": { "Location": "/" }, "dest": "/" },
     { "src": "/video/(.*)", "dest": "/video/$1" },
     { "src": "/img/(.*)", "dest": "/img/$1" },
+    { "src": "/sound/(.*)", "dest": "/sound/$1" },
     { "src": "/rsvp", "dest": "/rsvp.html" },
     { "src": "/rsvp.html", "dest": "/rsvp.html" },
     { "src": "/live", "dest": "/livedj.html" },

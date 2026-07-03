@@ -16,3 +16,6 @@ Audio/
 
 # Claude local memory (not part of the site)
 memory/
+
+# Stray nested working copy (not part of the site)
+BLU2/
