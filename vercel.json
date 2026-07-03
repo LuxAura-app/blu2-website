@@ -5,8 +5,10 @@
     { "src": "rsvp.html", "use": "@vercel/static" },
     { "src": "livedj.html", "use": "@vercel/static" },
     { "src": "flyer.html", "use": "@vercel/static" },
+    { "src": "story.html", "use": "@vercel/static" },
     { "src": "BLU2-LIVE-flyer.pdf", "use": "@vercel/static" },
     { "src": "BLU2-LIVE-flyer.png", "use": "@vercel/static" },
+    { "src": "BLU2-LIVE-story.png", "use": "@vercel/static" },
     { "src": "video/**", "use": "@vercel/static" },
     { "src": "img/**", "use": "@vercel/static" }
   ],
@@ -21,8 +23,11 @@
     { "src": "/livedj.html", "dest": "/livedj.html" },
     { "src": "/flyer", "dest": "/flyer.html" },
     { "src": "/flyer.html", "dest": "/flyer.html" },
+    { "src": "/story", "dest": "/story.html" },
+    { "src": "/story.html", "dest": "/story.html" },
     { "src": "/BLU2-LIVE-flyer.pdf", "dest": "/BLU2-LIVE-flyer.pdf" },
     { "src": "/BLU2-LIVE-flyer.png", "dest": "/BLU2-LIVE-flyer.png" },
+    { "src": "/BLU2-LIVE-story.png", "dest": "/BLU2-LIVE-story.png" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

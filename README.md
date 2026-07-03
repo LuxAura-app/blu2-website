@@ -15,11 +15,16 @@ C:\Users\Team Parkins\Projects\BLU2
 - `index.html` — main mixtape landing + Rate & Review voting (`/`)
 - `rsvp.html` — RSVP flow (`/rsvp`)
 - `livedj.html` — **BLU2 LIVE** DJ session landing page (`/live` or `/livedj`)
-- `flyer.html` — still-flyer canvas (1080×1350, 4:5) used to render the PDF/PNG (`/flyer`)
+- `flyer.html` — still-flyer canvas (1080×1350, 4:5); also serves a fluid 9:16
+  phone layout at ≤900px. Used to render the feed PDF/PNG (`/flyer`)
+- `story.html` — 1080×1920 (9:16) canvas used to render the Instagram Story
+  image (`/story`)
 
 ## BLU2 LIVE DJ session flyer (DJ SaintBeliev3 — Sun July 5, 7:00 PM)
-Web page: `livedj.html`. Shareable graphics: `BLU2-LIVE-flyer.pdf` and
-`BLU2-LIVE-flyer.png` (2160×2700, post this to Instagram).
+Web page: `livedj.html`. Shareable graphics:
+- `BLU2-LIVE-flyer.png` (2160×2700, 4:5) — **Instagram feed post**
+- `BLU2-LIVE-story.png` (2160×3840, 9:16) — **Instagram Story**
+- `BLU2-LIVE-flyer.pdf` (4:5) — print
 
 Both the web page and the flyer use the DJ photo at `img/SaintBeliev3-DJ.JPEG`
 (case-sensitive on Vercel). If it's missing they gracefully fall back to the
@@ -31,14 +36,19 @@ CHROME="/c/Program Files/Google/Chrome/Application/chrome.exe"
 # PDF (vector text, 4:5)
 "$CHROME" --headless --no-sandbox --disable-gpu --no-pdf-header-footer \
   --print-to-pdf="BLU2-LIVE-flyer.pdf" "file:///C:/Users/Team%20Parkins/Projects/BLU2/flyer.html"
-# 2x PNG for social posting (2160x2700)
+# 2x PNG for the IG feed (2160x2700, 4:5)
 "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars \
   --force-device-scale-factor=2 --window-size=1080,1350 \
   --screenshot="BLU2-LIVE-flyer.png" "file:///C:/Users/Team%20Parkins/Projects/BLU2/flyer.html"
+# 2x PNG for the IG Story (2160x3840, 9:16)
+"$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars \
+  --force-device-scale-factor=2 --window-size=1080,1920 \
+  --screenshot="BLU2-LIVE-story.png" "file:///C:/Users/Team%20Parkins/Projects/BLU2/story.html"
 ```
 
-Edit event copy (date/time/handles) in both `flyer.html` and `livedj.html`.
-The countdown target lives in `livedj.html` (`new Date(2026, 6, 5, 19, 0, 0)`).
+Edit event copy (date/time/handles) in `flyer.html`, `story.html`, and
+`livedj.html`. The countdown target lives in `livedj.html`
+(`new Date(2026, 6, 5, 19, 0, 0)`).
 
 ## To update track list
 Edit the TRACKS array in index.html around line 990.
