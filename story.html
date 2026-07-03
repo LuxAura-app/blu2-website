@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>BLU2 LIVE — DJ SaintBeliev3 · Flyer</title>
+<title>BLU2 LIVE — Saint Believ3 · Flyer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
@@ -51,7 +51,7 @@
   .portrait-wrap {
     position: absolute;
     inset: 26px 26px auto 26px;
-    height: 1200px;
+    height: 1080px;
     border-radius: 28px;
     overflow: hidden;
     z-index: 1;
@@ -321,6 +321,53 @@
     color: var(--muted);
   }
 
+  /* ── STORY: prominent date/time + tap-to-watch CTA ── */
+  .st-date { margin-top: 30px; }
+  .st-day {
+    display: block;
+    font-size: 78px;
+    font-weight: 800;
+    line-height: 0.95;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    color: var(--off-white);
+    text-shadow: 0 3px 24px rgba(0,0,0,0.6);
+  }
+  .st-time {
+    display: block;
+    margin-top: 12px;
+    font-size: 30px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--orange);
+  }
+  .st-cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 34px;
+    padding: 30px 40px;
+    background: var(--orange);
+    color: var(--black);
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    border-radius: 18px;
+    text-decoration: none;
+    box-shadow:
+      0 0 30px rgba(232,80,26,0.55),
+      0 0 80px rgba(232,80,26,0.28);
+  }
+  .st-cta .play {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 42px; height: 42px; border-radius: 50%;
+    background: var(--black); color: var(--orange);
+    font-size: 20px; padding-left: 4px;
+  }
+
   /* ── SCREEN FIT ──
      Desktop keeps the fixed 1080×1350 canvas (also used for the PDF/PNG).
      Phones (≤900px) instead get a fluid, full-height 9:16 layout (.flyer-m)
@@ -458,7 +505,7 @@
     <div class="portrait-wrap">
       <img class="portrait" id="djphoto"
            src="img/SaintBeliev3-DJ.JPEG"
-           alt="DJ SaintBeliev3"
+           alt="Saint Believ3"
            onerror="document.getElementById('flyer').classList.add('no-photo')"/>
       <div class="portrait-fallback"></div>
     </div>
@@ -492,19 +539,15 @@
 
         <div class="dj">
           <span class="kicker">On the decks</span>
-          <span class="name">DJ SaintBeliev3</span>
+          <span class="name">Saint Believ3</span>
         </div>
 
-        <div class="infobar">
-          <div class="info-cell">
-            <span class="info-label">When</span>
-            <span class="info-value">Sunday · July 5<small>7:00 PM</small></span>
-          </div>
-          <div class="info-cell">
-            <span class="info-label">Where</span>
-            <span class="info-value">Live on Social<small>Instagram Live Stream</small></span>
-          </div>
+        <div class="st-date">
+          <span class="st-day">Sunday · July 5</span>
+          <span class="st-time">7:00 PM · Live on Social</span>
         </div>
+
+        <a class="st-cta"><span class="play">▶</span> Tap to Watch Live</a>
 
         <div class="flyer-footer">
           <div class="handles">
@@ -531,11 +574,11 @@
     </div>
 
     <div class="fm-photo">
-      <img src="img/SaintBeliev3-DJ.JPEG" alt="DJ SaintBeliev3"
+      <img src="img/SaintBeliev3-DJ.JPEG" alt="Saint Believ3"
            onerror="document.getElementById('flyer-m').classList.add('no-photo')"/>
       <div class="fallback"></div>
       <span class="fm-live"><span class="d"></span> Live</span>
-      <div class="tag">On the decks <b>DJ SaintBeliev3</b></div>
+      <div class="tag">On the decks <b>Saint Believ3</b></div>
     </div>
 
     <div class="fm-copy">
@@ -546,7 +589,7 @@
       </h1>
       <div class="fm-dj">
         <span class="k">On the decks</span>
-        <span class="n">DJ SaintBeliev3</span>
+        <span class="n">Saint Believ3</span>
       </div>
 
       <div class="fm-spacer"></div>
