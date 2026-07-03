@@ -5,3 +5,6 @@ node_modules/
 .env.local
 *.log
 desktop.ini
+
+# Claude local memory (not part of the site)
+memory/

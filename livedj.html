@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>BLU2 LIVE — DJ SaintBeliev3 · Sun July 5, 7PM</title>
+<meta name="description" content="BLU2 LIVE — a Better Left Unsaid 2 DJ session with DJ SaintBeliev3. Streaming live on social, Sunday July 5 at 7:00 PM."/>
+
+<!-- Open Graph / social share -->
+<meta property="og:title" content="BLU2 LIVE — DJ SaintBeliev3"/>
+<meta property="og:description" content="Live DJ session · Sunday July 5 · 7:00 PM · Streaming live on social."/>
+<meta property="og:type" content="website"/>
+<meta property="og:image" content="/BLU2-LIVE-flyer.png"/>
+<meta name="twitter:card" content="summary_large_image"/>
+
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  :root {
+    --orange: #E8501A;
+    --orange-hot: #FF6130;
+    --ember: #FFB347;
+    --black: #050505;
+    --off-white: #F0EDE8;
+    --muted: #8F8F8F;
+    --border: #181818;
+    --panel: #0D0D0D;
+  }
+
+  body {
+    background: var(--black);
+    color: var(--off-white);
+    font-family: 'Inter', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  a { color: inherit; }
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 22px 40px;
+    background: linear-gradient(to bottom, rgba(5,5,5,0.7) 0%, rgba(5,5,5,0) 100%);
+  }
+  .nav-logo { display: flex; align-items: center; text-decoration: none; }
+  .nav-logo img { height: 40px; width: auto; }
+  .nav-right { display: flex; align-items: center; gap: 34px; }
+  .nav-right a {
+    font-size: 11px; font-weight: 400; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--muted); text-decoration: none; transition: color 0.2s;
+    min-height: 44px; display: inline-flex; align-items: center;
+  }
+  .nav-right a:hover { color: var(--off-white); }
+  .nav-right a.accent { color: var(--orange); }
+  .nav-right a.accent:hover { color: var(--orange-hot); }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    padding: 120px 40px 80px;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  /* ambient burning-rose video behind everything */
+  .hero-bg {
+    position: absolute; inset: 0; z-index: 0;
+    width: 100%; height: 100%; object-fit: cover;
+    opacity: 0.5;
+    filter: saturate(1.05) contrast(1.05);
+  }
+  .hero::before {
+    content: ''; position: absolute; inset: 0; z-index: 1;
+    background:
+      radial-gradient(80% 70% at 70% 20%, rgba(232,80,26,0.30) 0%, rgba(232,80,26,0) 55%),
+      linear-gradient(180deg, rgba(5,5,5,0.55) 0%, rgba(5,5,5,0.35) 40%, rgba(5,5,5,0.85) 100%);
+  }
+  .glow {
+    position: absolute; top: -160px; right: -120px;
+    width: 640px; height: 640px; z-index: 1;
+    background: radial-gradient(circle, rgba(232,80,26,0.45) 0%, rgba(232,80,26,0) 70%);
+    pointer-events: none;
+  }
+
+  /* rising embers */
+  .embers { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
+  .ember {
+    position: absolute; bottom: -20px; border-radius: 50%;
+    background: var(--ember);
+    box-shadow: 0 0 10px 2px rgba(255,140,50,0.75);
+    animation: rise linear infinite;
+    opacity: 0;
+  }
+  @keyframes rise {
+    0%   { transform: translateY(0) translateX(0); opacity: 0; }
+    12%  { opacity: 0.9; }
+    80%  { opacity: 0.5; }
+    100% { transform: translateY(-105vh) translateX(30px); opacity: 0; }
+  }
+
+  .hero-inner {
+    position: relative; z-index: 5;
+    width: 100%; max-width: 1280px; margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 60px;
+    align-items: center;
+  }
+  .hero-text, .portrait-card { min-width: 0; }
+
+  /* text column */
+  .eyebrow {
+    font-size: 12px; letter-spacing: 0.34em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 22px;
+  }
+  .eyebrow b { color: var(--orange); font-weight: 600; }
+
+  .live-badge {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--orange); margin-bottom: 20px;
+  }
+  .live-dot {
+    width: 9px; height: 9px; border-radius: 50%; background: var(--orange);
+    box-shadow: 0 0 0 0 rgba(232,80,26,0.7);
+    animation: pulse 1.8s infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(232,80,26,0.7); }
+    70%  { box-shadow: 0 0 0 12px rgba(232,80,26,0); }
+    100% { box-shadow: 0 0 0 0 rgba(232,80,26,0); }
+  }
+
+  .hero-title {
+    font-weight: 900; line-height: 0.84; letter-spacing: -0.03em;
+    text-transform: uppercase; color: var(--off-white);
+    font-size: clamp(64px, 11vw, 148px);
+    margin-bottom: 24px;
+    text-shadow: 0 4px 40px rgba(0,0,0,0.5);
+  }
+  .hero-title .live {
+    color: var(--orange);
+    text-shadow: 0 0 42px rgba(232,80,26,0.55), 0 0 14px rgba(255,110,48,0.8);
+  }
+  .hero-title .set { display:block; font-size: 0.42em; font-weight: 800; letter-spacing: -0.01em; margin-top: 8px; }
+
+  .dj-line {
+    display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+    margin-bottom: 34px;
+  }
+  .dj-line .kick { font-size: 13px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--muted); }
+  .dj-line .dj { font-size: clamp(26px, 4vw, 40px); font-weight: 800; text-transform: uppercase; color: var(--orange); }
+
+  .meta {
+    display: flex; align-items: center; gap: 26px; flex-wrap: wrap;
+    margin-bottom: 40px;
+    font-size: 14px; letter-spacing: 0.06em; color: var(--off-white);
+  }
+  .meta .label { font-size: 10px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--orange); display:block; margin-bottom: 5px; font-weight: 600; }
+  .meta .val { font-size: 20px; font-weight: 600; }
+  .meta .sep { width: 1px; height: 40px; background: var(--border); }
+
+  .cta-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    min-height: 52px; padding: 15px 30px;
+    font-size: 12px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase;
+    text-decoration: none; cursor: pointer; transition: background 0.18s, border-color 0.2s, color 0.2s, transform 0.12s ease-out;
+  }
+  .btn-primary { background: var(--orange); color: var(--black); border: none; }
+  .btn-primary:hover { background: var(--orange-hot); }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-ghost { background: none; color: var(--off-white); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--orange); color: var(--orange); }
+  .btn-ghost:active { transform: scale(0.97); }
+
+  /* countdown */
+  .countdown {
+    display: flex; gap: 22px; margin-top: 42px;
+  }
+  .cd-cell { text-align: left; }
+  .cd-num {
+    font-size: 44px; font-weight: 800; line-height: 1; color: var(--off-white);
+    font-variant-numeric: tabular-nums;
+  }
+  .cd-lab { font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--muted); margin-top: 8px; }
+  .cd-live {
+    font-size: 20px; font-weight: 700; letter-spacing: 0.04em; color: var(--orange);
+    display: flex; align-items: center; gap: 12px;
+  }
+
+  /* portrait column — DJ centerpiece */
+  .portrait-card {
+    position: relative;
+    aspect-ratio: 4 / 5;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid rgba(240,237,232,0.12);
+    box-shadow: 0 30px 90px rgba(0,0,0,0.6), 0 0 60px rgba(232,80,26,0.15);
+  }
+  .portrait-card img.dj {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    object-position: center 28%;
+    filter: contrast(1.05) saturate(0.9);
+  }
+  .portrait-card .fallback {
+    position: absolute; inset: 0; display: none;
+    background: url("img/BurningRosePic.jpeg") center 22% / cover no-repeat;
+    filter: contrast(1.1) saturate(1.05);
+  }
+  .portrait-card.no-photo img.dj { display: none; }
+  .portrait-card.no-photo .fallback { display: block; }
+  .portrait-card::after {
+    content: ''; position: absolute; inset: 0;
+    background:
+      radial-gradient(90% 70% at 70% 20%, rgba(232,80,26,0.28), rgba(232,80,26,0) 60%),
+      linear-gradient(180deg, rgba(5,5,5,0) 55%, rgba(5,5,5,0.85) 100%);
+  }
+  .portrait-tag {
+    position: absolute; left: 20px; bottom: 20px; z-index: 3;
+    font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--off-white);
+  }
+  .portrait-tag b { color: var(--orange); display: block; font-size: 18px; letter-spacing: 0.02em; margin-top: 4px; }
+  .portrait-live {
+    position: absolute; right: 16px; top: 16px; z-index: 3;
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--orange); color: var(--black);
+    font-size: 10px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+    padding: 7px 12px; border-radius: 2px;
+  }
+  .portrait-live .d { width: 7px; height: 7px; border-radius: 50%; background: var(--black); animation: pulse2 1.6s infinite; }
+  @keyframes pulse2 { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+  /* ── ABOUT STRIP ── */
+  .strip {
+    max-width: 1280px; margin: 0 auto;
+    border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    padding: 40px;
+    display: flex; align-items: center; gap: 40px; flex-wrap: wrap;
+  }
+  .strip .sl { font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--orange); margin-bottom: 8px; font-weight: 600; }
+  .strip .sd { font-size: 15px; line-height: 1.7; color: var(--muted); flex: 1; min-width: 280px; }
+  .strip .sd b { color: var(--off-white); font-weight: 500; }
+
+  /* ── HOW TO WATCH ── */
+  .watch { max-width: 1280px; margin: 0 auto; padding: 80px 40px; }
+  .watch h2 { font-size: clamp(28px, 4vw, 48px); font-weight: 800; text-transform: uppercase; letter-spacing: -0.01em; margin-bottom: 40px; }
+  .watch h2 span { color: var(--orange); }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .step { border: 1px solid var(--border); background: var(--panel); padding: 30px; }
+  .step .n { font-size: 12px; letter-spacing: 0.2em; color: var(--orange); font-weight: 600; margin-bottom: 16px; }
+  .step h3 { font-size: 18px; font-weight: 600; margin-bottom: 10px; }
+  .step p { font-size: 14px; color: var(--muted); line-height: 1.7; }
+  .step a { color: var(--orange); text-decoration: none; }
+  .step a:hover { text-decoration: underline; }
+
+  /* ── FOOTER ── */
+  footer {
+    max-width: 1280px; margin: 0 auto;
+    border-top: 1px solid var(--border);
+    padding: 28px 40px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+    font-size: 12px; color: var(--muted);
+  }
+  footer .social { display: flex; gap: 26px; }
+  footer a { color: var(--muted); text-decoration: none; letter-spacing: 0.1em; }
+  footer a:hover { color: var(--off-white); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .hero { align-items: flex-start; min-height: auto; padding: 100px 22px 60px; }
+    .hero-inner { grid-template-columns: 1fr; gap: 36px; }
+    .portrait-card { max-width: 380px; margin: 0 auto; order: -1; width: 100%; }
+    .hero-title { font-size: clamp(56px, 17vw, 96px); }
+    .dj-line { gap: 6px; }
+    .dj-line .dj { font-size: clamp(24px, 8vw, 34px); }
+    .meta { flex-direction: column; align-items: flex-start; gap: 18px; }
+    .meta .sep { display: none; }
+    .cta-row { width: 100%; }
+    .cta-row .btn { flex: 1; }
+    .steps { grid-template-columns: 1fr; }
+    nav { padding: 18px 22px; gap: 12px; }
+    .nav-right { gap: 18px; }
+    .strip, .watch, footer { padding-left: 22px; padding-right: 22px; }
+    .strip { gap: 24px; }
+    .countdown { gap: 16px; }
+    .cd-num { font-size: 34px; }
+  }
+  @media (max-width: 480px) {
+    .nav-right a:not(.accent) { display: none; }
+    .cd-num { font-size: 28px; }
+    .countdown { gap: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="/" aria-label="All Flights Delayed — home">
+    <img src="img/afd-logo.png" alt="All Flights Delayed"/>
+  </a>
+  <div class="nav-right">
+    <a href="/">Mixtape</a>
+    <a href="https://instagram.com/saintbeliev3" target="_blank" rel="noopener">@saintbeliev3</a>
+    <a class="accent" href="https://instagram.com/mali__v" target="_blank" rel="noopener">Watch Live →</a>
+  </div>
+</nav>
+
+<!-- ═══════════ HERO ═══════════ -->
+<section class="hero">
+  <video class="hero-bg" autoplay muted loop playsinline poster="img/BurningRosePic.jpeg">
+    <source src="video/Rose_new.mp4" type="video/mp4"/>
+  </video>
+  <div class="glow"></div>
+  <div class="embers" id="embers"></div>
+
+  <div class="hero-inner">
+    <!-- TEXT -->
+    <div class="hero-text">
+      <div class="eyebrow">Tentatively Titled Productions <b>Presents</b></div>
+      <div class="live-badge"><span class="live-dot"></span> Live DJ Session</div>
+
+      <h1 class="hero-title">BLU2 <span class="live">Live</span><span class="set">DJ Set</span></h1>
+
+      <div class="dj-line">
+        <span class="kick">On the decks</span>
+        <span class="dj">DJ SaintBeliev3</span>
+      </div>
+
+      <div class="meta">
+        <div>
+          <span class="label">When</span>
+          <span class="val">Sun · July 5 · 7:00 PM</span>
+        </div>
+        <div class="sep"></div>
+        <div>
+          <span class="label">Where</span>
+          <span class="val">Live on Social</span>
+        </div>
+      </div>
+
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://instagram.com/saintbeliev3" target="_blank" rel="noopener">Watch on Instagram ↗</a>
+        <a class="btn btn-ghost" href="#how">How to Watch</a>
+      </div>
+
+      <div class="countdown" id="countdown" aria-live="polite">
+        <div class="cd-cell"><div class="cd-num" id="cd-d">--</div><div class="cd-lab">Days</div></div>
+        <div class="cd-cell"><div class="cd-num" id="cd-h">--</div><div class="cd-lab">Hours</div></div>
+        <div class="cd-cell"><div class="cd-num" id="cd-m">--</div><div class="cd-lab">Mins</div></div>
+        <div class="cd-cell"><div class="cd-num" id="cd-s">--</div><div class="cd-lab">Secs</div></div>
+      </div>
+    </div>
+
+    <!-- PORTRAIT / CENTERPIECE -->
+    <div class="portrait-card" id="portrait">
+      <img class="dj" src="img/saintbeliev3.jpg" alt="DJ SaintBeliev3"
+           onerror="document.getElementById('portrait').classList.add('no-photo')"/>
+      <div class="fallback"></div>
+      <span class="portrait-live"><span class="d"></span> Live</span>
+      <div class="portrait-tag">On the decks <b>DJ SaintBeliev3</b></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ ABOUT STRIP ═══════════ -->
+<div class="strip">
+  <div>
+    <div class="sl">The Session</div>
+  </div>
+  <div class="sd">
+    A live set spun straight from the world of <b>Better Left Unsaid 2</b> — mixed live by
+    <b>DJ SaintBeliev3</b> of the Tentatively Titled Productions team. Tune in, request, and
+    ride the wave. No ticket, no cover — just hit play on the stream.
+  </div>
+  <a class="btn btn-ghost" href="https://instagram.com/saintbeliev3" target="_blank" rel="noopener">Follow @saintbeliev3</a>
+</div>
+
+<!-- ═══════════ HOW TO WATCH ═══════════ -->
+<section class="watch" id="how">
+  <h2>How to <span>Watch</span></h2>
+  <div class="steps">
+    <div class="step">
+      <div class="n">01</div>
+      <h3>Follow the stream</h3>
+      <p>Follow <a href="https://instagram.com/saintbeliev3" target="_blank" rel="noopener">@saintbeliev3</a> and <a href="https://instagram.com/mali__v" target="_blank" rel="noopener">@mali__v</a> on Instagram so you get the go-live alert.</p>
+    </div>
+    <div class="step">
+      <div class="n">02</div>
+      <h3>Set a reminder</h3>
+      <p>Sunday, July 5 at 7:00 PM. The countdown up top is ticking — don't miss the drop.</p>
+    </div>
+    <div class="step">
+      <div class="n">03</div>
+      <h3>Pull up live</h3>
+      <p>Open the live stream when it starts, drop your requests in the comments, and rate the tape at <a href="/">betterleftunsaid2.com</a>.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>© 2026 AllFlightsDelayed</p>
+  <div class="social">
+    <a href="https://instagram.com/mali__v" target="_blank" rel="noopener">Instagram</a>
+    <a href="https://instagram.com/saintbeliev3" target="_blank" rel="noopener">SaintBeliev3</a>
+    <a href="/">Mixtape</a>
+  </div>
+  <p>betterleftunsaid2.com</p>
+</footer>
+
+<script>
+  /* ── Rising embers ── */
+  (function () {
+    var box = document.getElementById('embers');
+    if (!box) return;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var count = reduce ? 0 : 26;
+    for (var i = 0; i < count; i++) {
+      var e = document.createElement('span');
+      e.className = 'ember';
+      var size = 2 + Math.random() * 5;
+      e.style.left = (Math.random() * 100) + '%';
+      e.style.width = size + 'px';
+      e.style.height = size + 'px';
+      e.style.animationDuration = (7 + Math.random() * 9) + 's';
+      e.style.animationDelay = (-Math.random() * 12) + 's';
+      box.appendChild(e);
+    }
+  })();
+
+  /* ── Countdown to Sun July 5, 2026 · 7:00 PM (local) ── */
+  (function () {
+    var target = new Date(2026, 6, 5, 19, 0, 0); // month is 0-indexed → 6 = July
+    var d = document.getElementById('cd-d'),
+        h = document.getElementById('cd-h'),
+        m = document.getElementById('cd-m'),
+        s = document.getElementById('cd-s'),
+        wrap = document.getElementById('countdown');
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    function tick() {
+      var now = new Date();
+      var diff = Math.floor((target - now) / 1000);
+      if (diff <= 0) {
+        wrap.innerHTML = '<div class="cd-live"><span class="live-dot"></span> We’re live now — <a href="https://instagram.com/saintbeliev3" target="_blank" rel="noopener" style="color:var(--orange);">watch the set ↗</a></div>';
+        return;
+      }
+      var days = Math.floor(diff / 86400);
+      var hrs = Math.floor((diff % 86400) / 3600);
+      var mins = Math.floor((diff % 3600) / 60);
+      var secs = diff % 60;
+      d.textContent = days;
+      h.textContent = pad(hrs);
+      m.textContent = pad(mins);
+      s.textContent = pad(secs);
+      setTimeout(tick, 1000);
+    }
+    tick();
+  })();
+</script>
+</body>
+</html>

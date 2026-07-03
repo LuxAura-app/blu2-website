@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>BLU2 LIVE — DJ SaintBeliev3 · Flyer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --orange: #E8501A;
+    --orange-hot: #FF6130;
+    --ember: #FFB347;
+    --black: #050505;
+    --off-white: #F0EDE8;
+    --muted: #8F8F8F;
+    --border: #181818;
+  }
+
+  html, body {
+    background: #000;
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Screen preview centering (ignored in print) */
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  /* ── THE FLYER CANVAS — 1080 x 1350 (4:5) ── */
+  .flyer {
+    position: relative;
+    width: 1080px;
+    height: 1350px;
+    background: var(--black);
+    color: var(--off-white);
+    overflow: hidden;
+    isolation: isolate;
+    box-shadow: 0 40px 120px rgba(0,0,0,0.7);
+  }
+
+  /* ── LAYER 1: PORTRAIT / HERO IMAGE ── */
+  .portrait-wrap {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 820px;
+    overflow: hidden;
+    z-index: 1;
+  }
+  .portrait {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 28%;
+    /* Duotone-lean toward the BLU2 palette */
+    filter: contrast(1.06) saturate(0.85) brightness(0.92);
+  }
+  /* Orange wash that ties any photo into the burning-rose theme */
+  .portrait-wrap::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(120% 90% at 72% 18%, rgba(232,80,26,0.42) 0%, rgba(232,80,26,0) 55%),
+      linear-gradient(180deg, rgba(5,5,5,0) 30%, rgba(5,5,5,0.35) 62%, var(--black) 99%);
+    mix-blend-mode: normal;
+    z-index: 2;
+  }
+  /* subtle orange multiply for the fiery grade */
+  .portrait-wrap::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(200deg, rgba(232,80,26,0.16), rgba(5,5,5,0) 45%);
+    mix-blend-mode: screen;
+    z-index: 2;
+  }
+
+  /* Fallback shown when the DJ photo is missing — the burning rose becomes the hero */
+  .portrait-fallback {
+    position: absolute;
+    inset: 0;
+    display: none;
+    background: url("img/BurningRosePic.jpeg") center 22% / cover no-repeat;
+    filter: contrast(1.1) saturate(1.05);
+  }
+  .flyer.no-photo .portrait { display: none; }
+  .flyer.no-photo .portrait-fallback { display: block; }
+  .portrait-fallback::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(120% 90% at 68% 22%, rgba(232,80,26,0.30) 0%, rgba(232,80,26,0) 55%);
+  }
+
+  /* ── LAYER 2: AMBIENT GLOW + BURNING-ROSE FLARE ── */
+  .glow-top {
+    position: absolute;
+    top: -180px; right: -140px;
+    width: 720px; height: 720px;
+    background: radial-gradient(circle, rgba(232,80,26,0.55) 0%, rgba(232,80,26,0.14) 38%, rgba(232,80,26,0) 70%);
+    filter: blur(6px);
+    z-index: 3;
+    pointer-events: none;
+  }
+  .glow-bottom {
+    position: absolute;
+    bottom: -220px; left: -160px;
+    width: 640px; height: 640px;
+    background: radial-gradient(circle, rgba(232,80,26,0.30) 0%, rgba(232,80,26,0) 68%);
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  /* A small burning-rose motif tucked bottom-right as signature flare */
+  .rose-motif {
+    position: absolute;
+    right: -60px; bottom: -40px;
+    width: 380px; height: 470px;
+    background: url("img/BurningRosePic.jpeg") center / cover no-repeat;
+    -webkit-mask-image: radial-gradient(circle at 60% 40%, #000 30%, rgba(0,0,0,0.35) 55%, transparent 72%);
+    mask-image: radial-gradient(circle at 60% 40%, #000 30%, rgba(0,0,0,0.35) 55%, transparent 72%);
+    opacity: 0.5;
+    mix-blend-mode: screen;
+    filter: saturate(1.2) contrast(1.1);
+    z-index: 4;
+    pointer-events: none;
+  }
+
+  /* ── EMBERS ── */
+  .embers { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+  .ember {
+    position: absolute;
+    border-radius: 50%;
+    background: var(--ember);
+    box-shadow: 0 0 10px 2px rgba(255,140,50,0.8);
+  }
+
+  /* ── LAYER 3: CONTENT ── */
+  .content {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    padding: 52px 60px 58px;
+  }
+
+  /* top bar */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .topbar img { height: 46px; width: auto; opacity: 0.95; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.6)); }
+  .presents {
+    font-size: 12px;
+    letter-spacing: 0.34em;
+    text-transform: uppercase;
+    color: var(--off-white);
+    text-align: right;
+    line-height: 1.5;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+  }
+  .presents span { color: var(--orange); display: block; font-weight: 600; }
+
+  .spacer { flex: 1; }
+
+  /* headline block sits on the dark lower third */
+  .headline-block { position: relative; }
+
+  .eyebrow {
+    font-size: 15px;
+    letter-spacing: 0.42em;
+    text-transform: uppercase;
+    color: var(--orange);
+    font-weight: 600;
+    margin-bottom: 22px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .eyebrow::before {
+    content: '';
+    width: 46px; height: 2px;
+    background: var(--orange);
+    box-shadow: 0 0 12px rgba(232,80,26,0.9);
+  }
+
+  .title {
+    font-weight: 900;
+    line-height: 0.82;
+    letter-spacing: -0.03em;
+    text-transform: uppercase;
+    color: var(--off-white);
+    text-shadow: 0 4px 30px rgba(0,0,0,0.7);
+  }
+  .title .l1 { font-size: 210px; display: block; }
+  .title .live {
+    color: var(--orange);
+    text-shadow: 0 0 40px rgba(232,80,26,0.65), 0 0 14px rgba(255,110,48,0.9);
+  }
+  .title .l2 {
+    font-size: 96px;
+    display: block;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-top: 6px;
+    color: var(--off-white);
+  }
+
+  /* DJ name plate */
+  .dj {
+    margin-top: 34px;
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+  }
+  .dj .kicker {
+    font-size: 20px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .dj .name {
+    font-size: 52px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    color: var(--orange);
+    text-shadow: 0 0 26px rgba(232,80,26,0.45);
+  }
+
+  /* date / time bar */
+  .infobar {
+    margin-top: 40px;
+    display: flex;
+    align-items: stretch;
+    border-top: 1px solid rgba(240,237,232,0.16);
+    border-bottom: 1px solid rgba(240,237,232,0.16);
+  }
+  .info-cell {
+    flex: 1;
+    padding: 22px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .info-cell + .info-cell {
+    border-left: 1px solid rgba(240,237,232,0.16);
+    padding-left: 30px;
+  }
+  .info-label {
+    font-size: 12px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--orange);
+    font-weight: 600;
+  }
+  .info-value {
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--off-white);
+  }
+  .info-value small { display:block; font-size: 15px; font-weight: 400; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; margin-top: 4px; }
+
+  /* footer handles */
+  .flyer-footer {
+    margin-top: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .handles {
+    display: flex;
+    align-items: center;
+    gap: 26px;
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--off-white);
+  }
+  .handles .ig { color: var(--orange); font-size: 22px; line-height: 0; }
+  .handles .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); }
+  .url {
+    font-size: 15px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ── PRINT / PDF ── */
+  @page { size: 1080px 1350px; margin: 0; }
+  @media print {
+    body { display: block; padding: 0; background: #fff; }
+    .flyer { box-shadow: none; }
+    html, body { width: 1080px; height: 1350px; }
+  }
+</style>
+</head>
+<body>
+  <div class="flyer" id="flyer">
+
+    <!-- HERO / PORTRAIT -->
+    <div class="portrait-wrap">
+      <img class="portrait" id="djphoto"
+           src="img/saintbeliev3.jpg"
+           alt="DJ SaintBeliev3"
+           onerror="document.getElementById('flyer').classList.add('no-photo')"/>
+      <div class="portrait-fallback"></div>
+    </div>
+
+    <!-- FLARE -->
+    <div class="glow-top"></div>
+    <div class="glow-bottom"></div>
+    <div class="rose-motif"></div>
+
+    <!-- EMBERS -->
+    <div class="embers" id="embers"></div>
+
+    <!-- CONTENT -->
+    <div class="content">
+      <div class="topbar">
+        <img src="img/afd-logo.png" alt="All Flights Delayed"/>
+        <div class="presents">
+          Tentatively Titled Productions
+          <span>Presents</span>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="headline-block">
+        <div class="eyebrow">Live DJ Session</div>
+        <h1 class="title">
+          <span class="l1">BLU2 <span class="live">LIVE</span></span>
+          <span class="l2">DJ Set</span>
+        </h1>
+
+        <div class="dj">
+          <span class="kicker">On the decks</span>
+          <span class="name">DJ SaintBeliev3</span>
+        </div>
+
+        <div class="infobar">
+          <div class="info-cell">
+            <span class="info-label">When</span>
+            <span class="info-value">Sunday · July 5<small>7:00 PM</small></span>
+          </div>
+          <div class="info-cell">
+            <span class="info-label">Where</span>
+            <span class="info-value">Live on Social<small>Instagram Live Stream</small></span>
+          </div>
+        </div>
+
+        <div class="flyer-footer">
+          <div class="handles">
+            <span class="ig">◎</span>
+            <span>@mali__v</span>
+            <span class="dot"></span>
+            <span>@saintbeliev3</span>
+          </div>
+          <div class="url">betterleftunsaid2.com</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Deterministic ember field (no RNG so print output is stable)
+  (function () {
+    var seeds = [
+      [8, 12, 5, 0.9], [22, 30, 3, 0.7], [15, 55, 4, 0.6], [30, 8, 6, 0.85],
+      [44, 40, 3, 0.5], [58, 18, 5, 0.8], [67, 52, 4, 0.65], [78, 26, 7, 0.9],
+      [88, 44, 3, 0.55], [92, 14, 5, 0.75], [12, 70, 4, 0.5], [26, 82, 6, 0.7],
+      [40, 66, 3, 0.45], [54, 78, 5, 0.6], [70, 70, 4, 0.55], [83, 84, 6, 0.7],
+      [6, 40, 3, 0.5], [36, 22, 4, 0.6], [62, 34, 3, 0.5], [95, 62, 4, 0.6],
+      [18, 38, 2, 0.4], [48, 12, 3, 0.5], [74, 6, 4, 0.7], [90, 30, 3, 0.5]
+    ];
+    var box = document.getElementById('embers');
+    var frag = document.createDocumentFragment();
+    seeds.forEach(function (s) {
+      var e = document.createElement('span');
+      e.className = 'ember';
+      e.style.left = s[0] + '%';
+      e.style.top = s[1] + '%';
+      e.style.width = s[2] + 'px';
+      e.style.height = s[2] + 'px';
+      e.style.opacity = s[3];
+      frag.appendChild(e);
+    });
+    box.appendChild(frag);
+  })();
+</script>
+</body>
+</html>
