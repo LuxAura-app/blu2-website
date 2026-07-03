@@ -301,16 +301,32 @@
     color: var(--muted);
   }
 
-  /* ── PRINT / PDF ── */
+  /* ── SCREEN FIT — scale the fixed 1080×1350 canvas down to fit small screens.
+     The canvas itself never changes size (the PDF/PNG exports depend on it);
+     fitFlyer() in JS just applies a transform on screens ≤ 900px wide. ── */
+  .flyer-stage { position: relative; width: 1080px; height: 1350px; }
+  @media screen and (max-width: 900px) {
+    body { align-items: flex-start; padding: 14px; overflow-x: hidden; }
+    .flyer {
+      position: absolute; top: 0; left: 0;
+      transform-origin: top left;
+      box-shadow: none;
+    }
+    /* .flyer-stage dimensions + .flyer scale are set by fitFlyer() below */
+  }
+
+  /* ── PRINT / PDF ── (kept full 1080×1350, unaffected by the screen scaling) */
   @page { size: 1080px 1350px; margin: 0; }
   @media print {
     body { display: block; padding: 0; background: #fff; }
-    .flyer { box-shadow: none; }
+    .flyer-stage { width: 1080px !important; height: 1350px !important; }
+    #flyer { position: relative !important; transform: none !important; box-shadow: none; }
     html, body { width: 1080px; height: 1350px; }
   }
 </style>
 </head>
 <body>
+  <div class="flyer-stage" id="flyer-stage">
   <div class="flyer" id="flyer">
 
     <!-- HERO / PORTRAIT -->
@@ -377,6 +393,7 @@
       </div>
     </div>
   </div>
+  </div><!-- /.flyer-stage -->
 
 <script>
   // Deterministic ember field (no RNG so print output is stable)
@@ -402,6 +419,32 @@
       frag.appendChild(e);
     });
     box.appendChild(frag);
+  })();
+
+  // Scale the fixed 1080×1350 canvas to fit narrow (mobile) screens.
+  // Gated at ≤900px so full-size PNG renders (window ≥ ~1000px) stay untouched,
+  // and neutralised entirely for print/PDF via the @media print rules above.
+  (function () {
+    var CANVAS_W = 1080, CANVAS_H = 1350, PAD = 28; // PAD = body padding * 2
+    var stage = document.getElementById('flyer-stage');
+    var flyer = document.getElementById('flyer');
+    function fitFlyer() {
+      var vw = document.documentElement.clientWidth;
+      if (vw > 900) { // desktop: natural size, clear any inline scaling
+        flyer.style.transform = '';
+        stage.style.width = '';
+        stage.style.height = '';
+        return;
+      }
+      var avail = vw - PAD;
+      var scale = avail / CANVAS_W;
+      flyer.style.transform = 'scale(' + scale + ')';
+      stage.style.width = avail + 'px';
+      stage.style.height = (CANVAS_H * scale) + 'px';
+    }
+    fitFlyer();
+    window.addEventListener('resize', fitFlyer);
+    window.addEventListener('orientationchange', fitFlyer);
   })();
 </script>
 </body>
