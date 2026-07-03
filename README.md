@@ -21,10 +21,10 @@ C:\Users\Team Parkins\Projects\BLU2
 Web page: `livedj.html`. Shareable graphics: `BLU2-LIVE-flyer.pdf` and
 `BLU2-LIVE-flyer.png` (2160×2700, post this to Instagram).
 
-Both the web page and the flyer look for a DJ photo at `img/saintbeliev3.jpg`.
-Until that file exists they gracefully fall back to the burning rose. **To use a
-real photo:** drop a portrait (ideally ~4:5, subject slightly high in frame) at
-`img/saintbeliev3.jpg`, then regenerate the still graphics:
+Both the web page and the flyer use the DJ photo at `img/SaintBeliev3-DJ.JPEG`
+(case-sensitive on Vercel). If it's missing they gracefully fall back to the
+burning rose. **To swap the photo:** replace that file (ideally a portrait,
+subject slightly high in frame), then regenerate the still graphics:
 
 ```bash
 CHROME="/c/Program Files/Google/Chrome/Application/chrome.exe"

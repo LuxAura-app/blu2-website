@@ -184,7 +184,13 @@
     color: var(--off-white);
     text-align: right;
     line-height: 1.5;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+    /* light-orange outline so it stays legible over the yellow flame */
+    -webkit-text-stroke: 0.6px rgba(255,168,92,0.95);
+    paint-order: stroke fill;
+    text-shadow:
+      0 0 2px rgba(60,18,0,0.95),
+      0 0 7px rgba(255,150,70,0.85),
+      0 2px 6px rgba(0,0,0,0.85);
   }
   .presents span { color: var(--orange); display: block; font-weight: 600; }
 
@@ -315,30 +321,130 @@
     color: var(--muted);
   }
 
-  /* ── SCREEN FIT — scale the fixed 1080×1350 canvas down to fit small screens.
-     The canvas itself never changes size (the PDF/PNG exports depend on it);
-     fitFlyer() in JS just applies a transform on screens ≤ 900px wide. ── */
+  /* ── SCREEN FIT ──
+     Desktop keeps the fixed 1080×1350 canvas (also used for the PDF/PNG).
+     Phones (≤900px) instead get a fluid, full-height 9:16 layout (.flyer-m)
+     that fills the screen with nothing cropped. ── */
   .flyer-stage { position: relative; width: 1080px; height: 1350px; }
+  .flyer-m { display: none; }
+
   @media screen and (max-width: 900px) {
     body {
-      align-items: center; justify-content: center;
-      padding: 0; overflow: hidden;
-      min-height: 100vh; min-height: 100dvh;
+      display: block; padding: 0; margin: 0;
+      align-items: stretch; overflow-x: hidden;
+      background: var(--black);
     }
-    .flyer-stage { margin: auto; }
-    .flyer {
-      position: absolute; top: 0; left: 0;
-      transform-origin: top left;
-      box-shadow: none;
-    }
-    /* .flyer-stage dimensions + .flyer scale are set by fitFlyer() below */
+    .flyer-stage { display: none; } /* fixed 4:5 canvas is desktop/print only */
+    .flyer-m { display: flex; }
   }
+
+  /* ── PHONE FLYER (9:16, fluid — fills the screen, no cropping) ── */
+  .flyer-m {
+    position: relative;
+    flex-direction: column;
+    width: 100vw;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: hidden;
+    background: var(--black);
+    color: var(--off-white);
+    padding: 5vw 5.5vw calc(4.5vw + env(safe-area-inset-bottom, 0px));
+  }
+  /* ambient burning-rose glow */
+  .flyer-m::before {
+    content: ''; position: absolute; z-index: 0; pointer-events: none;
+    top: -12vh; right: -24vw; width: 86vw; height: 86vw;
+    background: radial-gradient(circle, rgba(232,80,26,0.42) 0%, rgba(232,80,26,0) 68%);
+  }
+  .flyer-m > * { position: relative; z-index: 2; }
+
+  .fm-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 4vw; }
+  .fm-top img { height: 8.5vw; width: auto; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.6)); }
+  .fm-top .presents { font-size: 3vw; letter-spacing: 0.3em; line-height: 1.5; }
+
+  .fm-photo {
+    position: relative;
+    margin-top: 3.5vw;
+    height: 42vh;
+    border-radius: 5.5vw;
+    overflow: hidden;
+    border: 2px solid var(--orange);
+    box-shadow:
+      0 0 3vw rgba(232,80,26,0.55),
+      0 0 8vw rgba(232,80,26,0.32),
+      0 0 16vw rgba(232,80,26,0.16),
+      inset 0 0 8vw rgba(232,80,26,0.10);
+  }
+  .fm-photo img, .fm-photo .fallback {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; object-position: center 26%;
+    filter: contrast(1.05) saturate(0.9);
+    -webkit-mask-image: radial-gradient(128% 118% at 50% 42%, #000 62%, rgba(0,0,0,0) 100%);
+            mask-image: radial-gradient(128% 118% at 50% 42%, #000 62%, rgba(0,0,0,0) 100%);
+  }
+  .fm-photo .fallback { display: none; background: url("img/BurningRosePic.jpeg") center 22% / cover no-repeat; }
+  .flyer-m.no-photo .fm-photo img { display: none; }
+  .flyer-m.no-photo .fm-photo .fallback { display: block; }
+  .fm-photo::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(90% 70% at 70% 16%, rgba(232,80,26,0.24), rgba(232,80,26,0) 60%),
+      linear-gradient(180deg, rgba(5,5,5,0) 52%, rgba(5,5,5,0.55) 100%);
+  }
+  .fm-live {
+    position: absolute; right: 3.5vw; top: 3.5vw; z-index: 3;
+    display: inline-flex; align-items: center; gap: 1.6vw;
+    background: var(--orange); color: var(--black);
+    font-size: 2.6vw; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+    padding: 1.6vw 2.6vw; border-radius: 1.2vw;
+  }
+  .fm-live .d { width: 1.6vw; height: 1.6vw; border-radius: 50%; background: var(--black); }
+  .fm-photo .tag {
+    position: absolute; left: 4vw; bottom: 3.5vw; z-index: 3;
+    font-size: 2.7vw; letter-spacing: 0.24em; text-transform: uppercase; color: var(--off-white);
+  }
+  .fm-photo .tag b { color: var(--orange); display: block; font-size: 4.4vw; letter-spacing: 0.02em; margin-top: 0.8vw; }
+
+  .fm-copy { display: flex; flex-direction: column; flex: 1; margin-top: 3.5vw; }
+  .fm-eyebrow {
+    display: flex; align-items: center; gap: 3vw;
+    font-size: 3.1vw; letter-spacing: 0.4em; text-transform: uppercase; color: var(--orange); font-weight: 600;
+  }
+  .fm-eyebrow::before { content: ''; width: 9vw; height: 2px; background: var(--orange); box-shadow: 0 0 3vw rgba(232,80,26,0.9); }
+
+  .fm-title {
+    font-weight: 900; line-height: 0.82; letter-spacing: -0.03em; text-transform: uppercase;
+    color: var(--off-white); margin-top: 2.5vw; text-shadow: 0 4px 6vw rgba(0,0,0,0.6);
+  }
+  .fm-title .l1 { display: block; font-size: 19vw; }
+  .fm-title .live { color: var(--orange); text-shadow: 0 0 8vw rgba(232,80,26,0.6), 0 0 3vw rgba(255,110,48,0.85); }
+  .fm-title .l2 { display: block; font-size: 8.5vw; font-weight: 800; margin-top: 1vw; }
+
+  .fm-dj { display: flex; flex-wrap: wrap; align-items: baseline; gap: 1vw 3vw; margin-top: 3vw; }
+  .fm-dj .k { font-size: 3vw; letter-spacing: 0.28em; text-transform: uppercase; color: var(--muted); }
+  .fm-dj .n { font-size: 6.6vw; font-weight: 800; text-transform: uppercase; color: var(--orange); text-shadow: 0 0 4vw rgba(232,80,26,0.45); }
+
+  .fm-spacer { flex: 1; min-height: 1.5vw; }
+
+  .fm-info { display: flex; border-top: 1px solid rgba(240,237,232,0.18); border-bottom: 1px solid rgba(240,237,232,0.18); }
+  .fm-info .cell { flex: 1; padding: 3vw 0; }
+  .fm-info .cell + .cell { border-left: 1px solid rgba(240,237,232,0.18); padding-left: 4.5vw; }
+  .fm-info .lab { font-size: 2.7vw; letter-spacing: 0.28em; text-transform: uppercase; color: var(--orange); font-weight: 600; }
+  .fm-info .val { font-size: 5.2vw; font-weight: 700; margin-top: 1.6vw; }
+  .fm-info .val small { display: block; font-size: 3vw; font-weight: 400; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-top: 1vw; }
+
+  .fm-foot { display: flex; justify-content: space-between; align-items: center; gap: 2.5vw; margin-top: 3vw; }
+  .fm-foot .handles { display: flex; align-items: center; gap: 2.2vw; font-size: 3vw; font-weight: 600; letter-spacing: 0.02em; white-space: nowrap; }
+  .fm-foot .handles .ig { color: var(--orange); font-size: 3.6vw; line-height: 0; }
+  .fm-foot .handles .dot { width: 1.1vw; height: 1.1vw; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .fm-foot .url { font-size: 2.3vw; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
 
   /* ── PRINT / PDF ── (kept full 1080×1350, unaffected by the screen scaling) */
   @page { size: 1080px 1350px; margin: 0; }
   @media print {
     body { display: block; padding: 0; background: #fff; }
-    .flyer-stage { width: 1080px !important; height: 1350px !important; }
+    .flyer-m { display: none !important; }
+    .flyer-stage { display: block !important; width: 1080px !important; height: 1350px !important; }
     #flyer { position: relative !important; transform: none !important; box-shadow: none; }
     html, body { width: 1080px; height: 1350px; }
   }
@@ -351,7 +457,7 @@
     <!-- HERO / PORTRAIT -->
     <div class="portrait-wrap">
       <img class="portrait" id="djphoto"
-           src="img/saintbeliev3.jpg"
+           src="img/SaintBeliev3-DJ.JPEG"
            alt="DJ SaintBeliev3"
            onerror="document.getElementById('flyer').classList.add('no-photo')"/>
       <div class="portrait-fallback"></div>
@@ -413,6 +519,60 @@
     </div>
   </div>
   </div><!-- /.flyer-stage -->
+
+  <!-- ═══ PHONE FLYER (9:16, fluid — fills the screen with nothing cropped) ═══ -->
+  <div class="flyer-m" id="flyer-m">
+    <div class="fm-top">
+      <img src="img/afd-logo.png" alt="All Flights Delayed"/>
+      <div class="presents">
+        Tentatively Titled Productions
+        <span>Presents</span>
+      </div>
+    </div>
+
+    <div class="fm-photo">
+      <img src="img/SaintBeliev3-DJ.JPEG" alt="DJ SaintBeliev3"
+           onerror="document.getElementById('flyer-m').classList.add('no-photo')"/>
+      <div class="fallback"></div>
+      <span class="fm-live"><span class="d"></span> Live</span>
+      <div class="tag">On the decks <b>DJ SaintBeliev3</b></div>
+    </div>
+
+    <div class="fm-copy">
+      <div class="fm-eyebrow">Live DJ Session</div>
+      <h1 class="fm-title">
+        <span class="l1">BLU2 <span class="live">LIVE</span></span>
+        <span class="l2">DJ Set</span>
+      </h1>
+      <div class="fm-dj">
+        <span class="k">On the decks</span>
+        <span class="n">DJ SaintBeliev3</span>
+      </div>
+
+      <div class="fm-spacer"></div>
+
+      <div class="fm-info">
+        <div class="cell">
+          <div class="lab">When</div>
+          <div class="val">Sunday · July 5<small>7:00 PM</small></div>
+        </div>
+        <div class="cell">
+          <div class="lab">Where</div>
+          <div class="val">Live on Social<small>Instagram Live Stream</small></div>
+        </div>
+      </div>
+
+      <div class="fm-foot">
+        <div class="handles">
+          <span class="ig">◎</span>
+          <span>@mali__v</span>
+          <span class="dot"></span>
+          <span>@saintbeliev3</span>
+        </div>
+        <div class="url">betterleftunsaid2.com</div>
+      </div>
+    </div>
+  </div>
 
 <script>
   // Deterministic ember field (no RNG so print output is stable)
