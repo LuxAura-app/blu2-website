@@ -20,7 +20,7 @@ const FROM_ADDRESS   = "Mali V <party@betterleftunsaid2.com>"; // verified Resen
 const UNSUBSCRIBE_MAILTO = "mailto:party@betterleftunsaid2.com?subject=unsubscribe";
 const SOCIALS        = {
   instagram: "https://instagram.com/mali__v",
-  youtube:   "https://youtube.com/@mali__v"
+  youtube:   "https://www.youtube.com/@718Mali"
 };
 
 // EVENT LOCATION: The Brewery Recording Studio, 910 Grand St, Brooklyn, NY 11211
