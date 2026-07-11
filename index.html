@@ -223,6 +223,21 @@ nav {
 .hero-cta:hover { background: #FF6130; }
 .hero-cta:active { transform: scale(0.97); }
 
+/* SYNOPSIS */
+.synopsis-section {
+  padding: 80px 40px;
+  max-width: 680px;
+  border-top: 1px solid var(--border);
+}
+.synopsis-text {
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+}
+.synopsis-text + .synopsis-text { margin-top: 20px; }
+.synopsis-text em { color: var(--off-white); font-style: normal; }
+
 /* LISTENING PARTY STRIP */
 .party-strip {
   border-top: 1px solid var(--border);
@@ -833,6 +848,7 @@ footer a:hover { color: var(--off-white); }
   .party-strip { flex-direction: column; align-items: flex-start; gap: 16px; padding: 24px 20px; }
   .party-divider { display: none; }
   .party-enter { margin-left: 0; }
+  .synopsis-section { padding: 60px 20px; }
   .tracklist-section { padding: 60px 20px; }
   .buy-section { padding: 60px 20px; }
   footer { padding: 24px 20px; }
@@ -921,6 +937,13 @@ footer a:hover { color: var(--off-white); }
         <a class="hero-cta" href="https://maliv.bandcamp.com/album/blu-2" target="_blank">Buy Mixtape</a>
       </div>
     </div>
+  </div>
+
+  <!-- SYNOPSIS -->
+  <div class="synopsis-section">
+    <div class="section-eyebrow">Better Left Unsaid</div>
+    <p class="synopsis-text"><em>Better Left Unsaid 2</em>, the second installment of the mixtape series for Mali V. Voicemails and messages randomly alert, grabbing our attention as the interweaving storyline continues — everyone in Mali V's life looking for him while he hides in plain sight. Will the current state of his affairs let him keep up his regular life? Will they ever know why he's on the run, or absent from their attempts to reach him?</p>
+    <p class="synopsis-text">This all stems from the fallout of <em>Money Grows On Trees</em>: RAH and SHEKEL were found dead after Mali V walked away from the revenge he almost took, leaving him a person of interest in one shooting and the prime suspect in a double homicide he doesn't even know happened. It's the cost of the same money, women, and fast life he bragged about from the jump — chased through a robbery, a near-retaliation, and a conscience he couldn't quite silence. Even J3 hasn't reached him to say it out loud.</p>
   </div>
 
   <!-- RATE & REVIEW STRIP -->
