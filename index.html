@@ -223,43 +223,6 @@ nav {
 .hero-cta:hover { background: #FF6130; }
 .hero-cta:active { transform: scale(0.97); }
 
-/* LIVE DJ SET BANNER */
-.live-banner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  flex-wrap: wrap;
-  padding: 18px 40px;
-  background: var(--orange);
-  color: var(--black);
-  text-decoration: none;
-  text-align: center;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  font-size: 12px;
-  font-weight: 600;
-  transition: background 0.18s, transform 0.12s ease-out;
-}
-.live-banner:hover { background: #FF6130; }
-.live-banner:active { transform: scale(0.995); }
-.live-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 10px;
-  letter-spacing: 0.3em;
-}
-.live-badge .dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--black);
-  animation: livePulse 1.4s ease-in-out infinite;
-}
-@keyframes livePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
-.live-banner .banner-arrow { font-weight: 600; }
-
 /* LISTENING PARTY STRIP */
 .party-strip {
   border-top: 1px solid var(--border);
@@ -959,13 +922,6 @@ footer a:hover { color: var(--off-white); }
       </div>
     </div>
   </div>
-
-  <!-- LIVE DJ SET BANNER -->
-  <a class="live-banner" href="https://www.instagram.com/saintbeliev3" target="_blank" rel="noopener">
-    <span class="live-badge"><span class="dot"></span> Live</span>
-    <span class="live-banner-text">Click Here to View the Live DJ Set</span>
-    <span class="banner-arrow">→</span>
-  </a>
 
   <!-- RATE & REVIEW STRIP -->
   <div class="party-strip">
