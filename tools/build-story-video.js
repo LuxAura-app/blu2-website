@@ -1,5 +1,6 @@
 // Records the animated story (dimmed rose video + rising embers + design)
-// to BLU2-LIVE-story.mp4. Local-only tool; run: node build-story-video.js
+// to BLU2-LIVE-story.mp4. Local-only tool; run from repo root:
+// node tools/build-story-video.js
 const fs = require('fs');
 const os = require('os');
 const path = require('path');

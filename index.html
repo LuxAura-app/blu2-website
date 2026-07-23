@@ -237,6 +237,30 @@ nav {
 .synopsis-text + .synopsis-text { margin-top: 20px; }
 .synopsis-text em { color: var(--off-white); font-style: normal; }
 
+/* WATCH SECTION */
+.watch-section {
+  padding: 80px 40px;
+  border-top: 1px solid var(--border);
+  max-width: 1280px;
+}
+.watch-video-wrap {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  aspect-ratio: 16 / 9;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.watch-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: var(--black);
+}
+.watch-cta { margin-top: 32px; }
+
 /* LISTENING PARTY STRIP */
 .party-strip {
   border-top: 1px solid var(--border);
@@ -848,6 +872,7 @@ footer a:hover { color: var(--off-white); }
   .party-divider { display: none; }
   .party-enter { margin-left: 0; }
   .synopsis-section { padding: 60px 20px; }
+  .watch-section { padding: 60px 20px; }
   .tracklist-section { padding: 60px 20px; }
   .buy-section { padding: 60px 20px; }
   footer { padding: 24px 20px; }
@@ -912,7 +937,8 @@ footer a:hover { color: var(--off-white); }
   <div class="nav-right">
     <span id="nav-user"></span>
     <button id="nav-logout" onclick="doLogout()" style="display:none;">Logout</button>
-    <a href="https://maliv.bandcamp.com/album/blu-2" target="_blank">Buy</a>
+    <a href="https://maliv.bandcamp.com/album/blu-2" target="_blank">Buy Mixtape</a>
+    <a id="nav-shop" href="shop.html">Shop</a>
     <button id="nav-vote-btn" onclick="handleVoteNav()">Review</button>
   </div>
 </nav>
@@ -944,6 +970,44 @@ footer a:hover { color: var(--off-white); }
     <p class="synopsis-text"><em>Better Left Unsaid 2</em>, the second installment of the mixtape series for Mali V. Voicemails and messages randomly alert, grabbing our attention as the interweaving storyline continues — everyone in Mali V's life looking for him while he hides in plain sight. Will the current state of his affairs let him keep up his regular life? Will they ever know why he's on the run, or absent from their attempts to reach him?</p>
     <p class="synopsis-text">This all stems from the fallout of <em>Money Grows On Trees</em>: Mali V walked away from the revenge he almost took, only to become a person of interest in one case and the prime suspect in another he doesn't even know about — deeply entangling him in the deaths of three people. It's the cost of the same money, women, and fast life he bragged about from the jump, chased through a robbery, a near-retaliation, and a conscience he couldn't quite silence. Even J3 hasn't reached him to say the truth out loud, which is why, at times like these, Mali V knows some things are truly <em>better left unsaid</em>.</p>
   </div>
+
+  <!-- WATCH -->
+  <div class="watch-section">
+    <div class="section-eyebrow">Better Left Unsaid — Visuals</div>
+    <div class="watch-video-wrap">
+      <video
+        id="blu2-listening-video"
+        class="watch-video"
+        autoplay
+        muted
+        loop
+        playsinline
+        controls
+        poster="img/blu2-hero-cover.jpg"
+      >
+        <source src="video/BLU2%20Listening%20Session.mp4" type="video/mp4"/>
+        <p>Your browser doesn't support embedded video. <a href="video/BLU2%20Listening%20Session.mp4">Download the listening session video</a> instead.</p>
+      </video>
+    </div>
+    <button type="button" class="hero-cta watch-cta" id="watch-fullscreen-btn">Watch Fullscreen ↗</button>
+  </div>
+  <script>
+    (function () {
+      var v = document.getElementById('blu2-listening-video');
+      if (v && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        v.removeAttribute('autoplay');
+        v.pause();
+      }
+      var btn = document.getElementById('watch-fullscreen-btn');
+      if (btn && v) {
+        btn.addEventListener('click', function () {
+          if (v.requestFullscreen) v.requestFullscreen();
+          else if (v.webkitRequestFullscreen) v.webkitRequestFullscreen();
+          else if (v.webkitEnterFullscreen) v.webkitEnterFullscreen();
+        });
+      }
+    })();
+  </script>
 
   <!-- RATE & REVIEW STRIP -->
   <div class="party-strip">

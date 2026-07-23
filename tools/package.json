@@ -1,0 +1,10 @@
+{
+  "name": "blu2-tools",
+  "private": true,
+  "description": "Local-only tooling (story video renderer). Not part of the Vercel deploy.",
+  "dependencies": {
+    "ffmpeg-static": "^5.3.0",
+    "ffprobe-static": "^3.1.0",
+    "puppeteer-core": "^25.3.0"
+  }
+}
