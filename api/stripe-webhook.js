@@ -75,6 +75,7 @@ async function submitProviderGroup(providerName, items, session, externalReferen
         internalOrderItemId: item.internalOrderItemId,
         providerVariantId: item.providerVariantId,
         sku: item.sku,
+        name: item.name,
         quantity: item.quantity,
         retailPriceCents: item.retailPriceCents,
       })),

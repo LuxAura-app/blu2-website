@@ -7,7 +7,7 @@ function isConfigured() {
 
 function renderItemLines(items) {
   return items
-    .map((item) => `  - ${item.quantity} x ${item.sku || item.providerVariantId} ($${(item.retailPriceCents / 100).toFixed(2)})`)
+    .map((item) => `  - ${item.quantity} x ${item.name || item.sku || item.providerVariantId} ($${(item.retailPriceCents / 100).toFixed(2)})`)
     .join('\n');
 }
 

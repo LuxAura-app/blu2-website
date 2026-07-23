@@ -17,6 +17,7 @@
  * @property {string} internalOrderItemId
  * @property {string} providerVariantId
  * @property {string} [sku]
+ * @property {string} [name] display/product name, used by provider payloads and notification emails
  * @property {number} quantity
  * @property {number} retailPriceCents
  *

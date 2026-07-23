@@ -37,4 +37,32 @@ async function sendAlert(subject, text) {
   }
 }
 
-module.exports = { sendAlert, resolveFromAddress };
+/**
+ * Sends a routine informational notice (e.g. "order shipped") — same
+ * delivery path as sendAlert but without the [ALERT] subject prefix, since
+ * this isn't something that needs a human to fix. Also never throws.
+ * @param {string} subject
+ * @param {string} text
+ * @returns {Promise<boolean>}
+ */
+async function sendNotice(subject, text) {
+  if (!process.env.RESEND_API_KEY || !process.env.ORDER_NOTIFICATION_EMAIL) {
+    console.error('[notice] RESEND_API_KEY/ORDER_NOTIFICATION_EMAIL not configured — notice not sent:', subject, text);
+    return false;
+  }
+  try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    await resend.emails.send({
+      from: resolveFromAddress('Alerts'),
+      to: process.env.ORDER_NOTIFICATION_EMAIL,
+      subject,
+      text,
+    });
+    return true;
+  } catch (err) {
+    console.error('[notice] Failed to send notice email:', subject, err);
+    return false;
+  }
+}
+
+module.exports = { sendAlert, sendNotice, resolveFromAddress };
