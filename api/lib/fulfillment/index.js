@@ -4,10 +4,10 @@
 const registry = require('./registry');
 const selfProvider = require('./self-provider');
 const apliiqProvider = require('./apliiq-provider');
+const printfulProvider = require('./printful-provider');
 
 registry.registerFulfillmentProvider(selfProvider);
 registry.registerFulfillmentProvider(apliiqProvider);
-
-// printful-provider is registered here once it lands.
+registry.registerFulfillmentProvider(printfulProvider);
 
 module.exports = registry;
