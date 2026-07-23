@@ -1,4 +1,5 @@
 const { Resend } = require('resend');
+const { resolveFromAddress } = require('../alert');
 
 function isConfigured() {
   return Boolean(process.env.RESEND_API_KEY && process.env.ORDER_NOTIFICATION_EMAIL);
@@ -32,7 +33,7 @@ async function createOrder(request) {
   const resend = new Resend(process.env.RESEND_API_KEY);
 
   await resend.emails.send({
-    from: `${process.env.STORE_NAME || 'Store'} Orders <orders@${new URL(process.env.SITE_URL || 'https://example.com').hostname}>`,
+    from: resolveFromAddress('Orders'),
     to: process.env.ORDER_NOTIFICATION_EMAIL,
     subject: `New self-fulfilled order — ${request.externalReference}`,
     text: [
