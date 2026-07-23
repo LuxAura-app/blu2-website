@@ -1,5 +1,5 @@
-const { listConsentedContactsInRange } = require('../lib/order-log');
-const { isAuthorizedAdminRequest, parseDateRange } = require('../lib/admin-auth');
+const { listConsentedContactsInRange } = require('../../lib/order-log');
+const { isAuthorizedAdminRequest, parseDateRange } = require('../../lib/admin-auth');
 
 function csvEscape(value) {
   const str = String(value || '');

@@ -7,7 +7,7 @@ Redis records into a proper Postgres table (e.g. Supabase): the record
 shape below is already close to a table row, so that migration is
 additive, not a rewrite.
 
-## Redis schema (`api/lib/order-log.js`)
+## Redis schema (`lib/order-log.js`)
 
 - `order:{stripeSessionId}` — a JSON string:
   ```json

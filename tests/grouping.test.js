@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { groupItemsByProvider } = require('../api/lib/fulfillment/grouping');
+const { groupItemsByProvider } = require('../lib/fulfillment/grouping');
 
 test('groups items by provider, preserving order within each group', () => {
   const items = [

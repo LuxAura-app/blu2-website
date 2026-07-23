@@ -1,10 +1,10 @@
 const Stripe = require('stripe');
-const { claimEvent, completeEvent } = require('./lib/idempotency');
-const { writeOrderRecord, updateOrderRecord } = require('./lib/order-log');
-const { decrementInventory } = require('./lib/inventory');
-const { groupItemsByProvider } = require('./lib/fulfillment/grouping');
-const { getFulfillmentProvider } = require('./lib/fulfillment');
-const alert = require('./lib/alert');
+const { claimEvent, completeEvent } = require('../lib/idempotency');
+const { writeOrderRecord, updateOrderRecord } = require('../lib/order-log');
+const { decrementInventory } = require('../lib/inventory');
+const { groupItemsByProvider } = require('../lib/fulfillment/grouping');
+const { getFulfillmentProvider } = require('../lib/fulfillment');
+const alert = require('../lib/alert');
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const MARKETING_CONSENT_FIELD_KEY = 'marketing_consent';

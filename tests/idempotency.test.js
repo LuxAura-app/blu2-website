@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { claimEvent, completeEvent, claimKey } = require('../api/lib/idempotency');
+const { claimEvent, completeEvent, claimKey } = require('../lib/idempotency');
 
 function makeFakeRedis({ setImpl } = {}) {
   const store = new Map();

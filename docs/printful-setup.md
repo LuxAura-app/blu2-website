@@ -1,7 +1,7 @@
 # Printful setup (Phase 2 — not required at launch)
 
-Printful is scaffolded (`api/lib/fulfillment/printful-provider.js`,
-registered in `api/lib/fulfillment/index.js`) but intentionally does
+Printful is scaffolded (`lib/fulfillment/printful-provider.js`,
+registered in `lib/fulfillment/index.js`) but intentionally does
 nothing yet: `isConfigured()` returns `false` until `PRINTFUL_API_KEY` is
 set, and `createOrder`/`getOrder` throw a clear "not configured" error if
 ever called before that. No product should be purchasable with
@@ -33,4 +33,4 @@ cut-and-sew, posters, art prints.
 
 None of this requires touching the storefront, cart, or Stripe checkout
 code — that's the point of the provider abstraction in
-`api/lib/fulfillment/`.
+`lib/fulfillment/`.

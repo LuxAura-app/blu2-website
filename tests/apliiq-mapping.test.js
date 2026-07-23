@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const apliiqProvider = require('../api/lib/fulfillment/apliiq-provider');
-const { buildAuthHeader } = require('../api/lib/fulfillment/apliiq-auth');
+const apliiqProvider = require('../lib/fulfillment/apliiq-provider');
+const { buildAuthHeader } = require('../lib/fulfillment/apliiq-auth');
 
 const fixtureRequest = {
   externalReference: 'BLU2-cs_test_abc-APLIIQ',

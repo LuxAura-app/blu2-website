@@ -1,5 +1,5 @@
-const { listOrdersInRange } = require('../lib/order-log');
-const { isAuthorizedAdminRequest, parseDateRange } = require('../lib/admin-auth');
+const { listOrdersInRange } = require('../../lib/order-log');
+const { isAuthorizedAdminRequest, parseDateRange } = require('../../lib/admin-auth');
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 

@@ -24,7 +24,7 @@ Accept: application/json
   raw request body, base64-encoded, or an empty string if there is none)
 - `APPID` — your `APLIIQ_APP_ID`
 
-Implemented in `api/lib/fulfillment/apliiq-auth.js`. **Never log
+Implemented in `lib/fulfillment/apliiq-auth.js`. **Never log
 `APLIIQ_SHARED_SECRET`** or the string that gets signed — Apliiq's docs are
 explicit that anyone with the shared secret can act on your account.
 
@@ -41,9 +41,9 @@ dollars, `sku` in Apliiq's `APQ-########S#A#` format), and
 `province`/`province_code`, `country`/`country_code`).
 
 Response is `{ "id": <apliiq order id> }`. Implemented in
-`api/lib/fulfillment/apliiq-client.js` (`createOrder`) and mapped from our
+`lib/fulfillment/apliiq-client.js` (`createOrder`) and mapped from our
 internal `FulfillmentOrderRequest` shape in
-`api/lib/fulfillment/apliiq-provider.js` (`buildApliiqOrderPayload`).
+`lib/fulfillment/apliiq-provider.js` (`buildApliiqOrderPayload`).
 
 One approximation worth knowing: our internal address model only stores a
 2-letter `stateCode`/`countryCode` (from Stripe's shipping address), but
@@ -62,7 +62,7 @@ over this, that's the first thing to check.
 Two things could not be found anywhere in Apliiq's published docs, despite
 a real search pass (not a guess):
 
-1. **A GET-order-status endpoint.** `api/lib/fulfillment/apliiq-client.js`'s
+1. **A GET-order-status endpoint.** `lib/fulfillment/apliiq-client.js`'s
    `getOrder()` guesses `GET /v1/Order/{id}` by analogy with the confirmed
    `POST /v1/Order`, but this is unverified — don't build anything that
    depends on it working until you've confirmed it against a real account

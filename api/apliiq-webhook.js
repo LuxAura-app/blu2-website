@@ -1,5 +1,5 @@
-const { findOrderByProviderOrderId, getOrderRecord, updateOrderRecord } = require('./lib/order-log');
-const alert = require('./lib/alert');
+const { findOrderByProviderOrderId, getOrderRecord, updateOrderRecord } = require('../lib/order-log');
+const alert = require('../lib/alert');
 
 /*
  * UNVERIFIED whether Apliiq will ever call this endpoint. No generic

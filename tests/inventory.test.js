@@ -1,7 +1,7 @@
 const { test, mock, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
-const { decrementInventory } = require('../api/lib/inventory');
-const alert = require('../api/lib/alert');
+const { decrementInventory } = require('../lib/inventory');
+const alert = require('../lib/alert');
 
 function makeFakeRedis(initial = {}) {
   const store = new Map(Object.entries(initial));
