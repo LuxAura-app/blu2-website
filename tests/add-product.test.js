@@ -2,22 +2,29 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { handleAddProduct } = require('../api/apliiq/add-product');
 
-// Shape per the fields Apliiq's Add to Store docs describe (name,
-// description, imageUrls, sizes, colors, variants[] with sku/price/color/
-// size/weight) — the exact real payload isn't independently confirmed
-// beyond field names (see docs/apliiq-webhooks.md), so this fixture is
-// built from the documented field list, not a captured live example.
-const FIXTURE_PAYLOAD = {
-  store_ProductId: null,
-  name: 'Better Left Unsaid 2 Tee',
-  description: 'Heavyweight tee, full front print.',
-  imageUrls: ['https://example.com/tee-black.jpg'],
-  sizes: ['S', 'M'],
-  colors: ['Black'],
-  variants: [
-    { sku: 'APQ-1998244S1A1', price: 24.5, color: 'Black', size: 'S', weight: 0.4 },
-    { sku: 'APQ-1998244S2A1', price: 24.5, color: 'Black', size: 'M', weight: 0.4 },
-  ],
+/**
+ * Real production shape, captured from Vercel logs on a live Add to Store
+ * attempt — NOT the shape described in Apliiq's published docs, which
+ * doesn't nest under `product` or include `ApliiqProductIds` at all. This
+ * is the confirmed real contract; docs/apliiq-webhooks.md has been updated
+ * to match. (The exact variant/image values below weren't part of what was
+ * pasted back — only the top-level shape was — so those are representative
+ * rather than byte-for-byte captured; the structural shape is what this
+ * test is verifying.)
+ */
+const REAL_PAYLOAD = {
+  ApliiqProductIds: [5989067],
+  product: {
+    name: 'Better Left Unsaid 2 Tee',
+    description: 'Heavyweight tee, full front print.',
+    imageUrls: ['https://example.com/tee-black.jpg'],
+    sizes: ['S', 'M'],
+    colors: ['Black'],
+    variants: [
+      { sku: 'APQ-5989067S1A1', price: 24.5, color: 'Black', size: 'S', weight: 0.4 },
+      { sku: 'APQ-5989067S2A1', price: 24.5, color: 'Black', size: 'M', weight: 0.4 },
+    ],
+  },
 };
 
 function fakeStripe() {
@@ -49,37 +56,76 @@ function fakeUpsert() {
   return fn;
 }
 
-test('maps a fixture Add to Store payload to one Stripe Product/Price per variant, always active:false', async () => {
+test('maps the real captured Add to Store payload to one Stripe Product/Price per variant, always active:false', async () => {
   const stripe = fakeStripe();
   const upsert = fakeUpsert();
 
-  const result = await handleAddProduct(FIXTURE_PAYLOAD, { stripe, upsert });
+  const result = await handleAddProduct(REAL_PAYLOAD, { stripe, upsert });
 
   assert.equal(result.hasError, false);
   assert.deepEqual(result.errorMessages, []);
-  assert.equal(result.storeProductId, 'apliiq-1998244');
+  // ApliiqProductIds[0] is the primary dedup key now, not the SKU prefix.
+  assert.equal(result.storeProductId, 'apliiq-5989067');
 
   assert.equal(stripe.calls.products.length, 2);
   assert.equal(stripe.calls.products[0].metadata.fulfillment_provider, 'apliiq');
-  assert.equal(stripe.calls.products[0].metadata.provider_variant_id, 'APQ-1998244S1A1');
+  assert.equal(stripe.calls.products[0].metadata.provider_variant_id, 'APQ-5989067S1A1');
 
   assert.equal(stripe.calls.prices.length, 2);
   assert.equal(stripe.calls.prices[0].unit_amount, 2450);
   assert.equal(stripe.calls.prices[0].currency, 'usd');
 
   assert.equal(upsert.calls.length, 1);
-  assert.equal(upsert.calls[0].id, 'apliiq-1998244');
+  assert.equal(upsert.calls[0].id, 'apliiq-5989067');
+  assert.equal(upsert.calls[0].patch.apliiqProductId, '5989067');
   assert.equal(upsert.calls[0].patch.active, false);
   assert.equal(upsert.calls[0].patch.source, 'apliiq-add-to-store');
+  assert.equal(upsert.calls[0].patch.name, 'Better Left Unsaid 2 Tee');
   assert.equal(upsert.calls[0].patch.variants.length, 2);
   assert.equal(upsert.calls[0].patch.variants[0].stripePriceId, 'price_1');
 });
 
-test('a payload missing required fields returns hasError:true instead of throwing', async () => {
+test('falls back to the SKU-prefix derivation when ApliiqProductIds is absent', async () => {
+  const stripe = fakeStripe();
+  const upsert = fakeUpsert();
+  // Deliberately a different numeric prefix than REAL_PAYLOAD's
+  // ApliiqProductIds (5989067), so a passing test proves the fallback
+  // path actually ran rather than coincidentally matching.
+  const payload = {
+    product: {
+      ...REAL_PAYLOAD.product,
+      variants: [{ sku: 'APQ-4633445S1A1', price: 24.5, color: 'Black', size: 'S', weight: 0.4 }],
+    },
+  };
+
+  const result = await handleAddProduct(payload, { stripe, upsert });
+
+  assert.equal(result.hasError, false);
+  assert.equal(result.storeProductId, 'apliiq-4633445');
+  assert.equal(upsert.calls[0].patch.apliiqProductId, null);
+});
+
+test('a payload missing the "product" object returns hasError:true instead of throwing', async () => {
   const stripe = fakeStripe();
   const upsert = fakeUpsert();
 
-  const result = await handleAddProduct({ name: '', variants: [] }, { stripe, upsert });
+  const result = await handleAddProduct({ ApliiqProductIds: [123] }, { stripe, upsert });
+
+  assert.equal(result.hasError, true);
+  assert.match(result.errorMessages[0], /product/);
+  assert.equal(result.storeProductId, null);
+  assert.equal(stripe.calls.products.length, 0);
+  assert.equal(upsert.calls.length, 0);
+});
+
+test('a payload with missing required fields returns hasError:true instead of throwing', async () => {
+  const stripe = fakeStripe();
+  const upsert = fakeUpsert();
+
+  const result = await handleAddProduct(
+    { ApliiqProductIds: [123], product: { name: '', variants: [] } },
+    { stripe, upsert }
+  );
 
   assert.equal(result.hasError, true);
   assert.ok(result.errorMessages.length > 0);
@@ -93,7 +139,7 @@ test('a variant missing a sku is reported without throwing', async () => {
   const upsert = fakeUpsert();
 
   const result = await handleAddProduct(
-    { name: 'Test Product', variants: [{ price: 10 }] },
+    { ApliiqProductIds: [123], product: { name: 'Test Product', variants: [{ price: 10 }] } },
     { stripe, upsert }
   );
 

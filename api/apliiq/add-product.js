@@ -7,19 +7,30 @@ const { upsertProduct, deriveInternalProductIdFromVariants } = require('../../li
  * created here is ever purchasable: every entry is written `active: false`
  * and a human has to review pricing/imagery and flip it active (§11 of the
  * fulfillment spec). See docs/apliiq-webhooks.md.
+ *
+ * Confirmed against a real captured payload (not just Apliiq's published
+ * docs example, which doesn't match): the request body nests everything
+ * under `product`, alongside a top-level `ApliiqProductIds` array —
+ *   { "ApliiqProductIds": [5989067], "product": { "name": ..., "variants": [...] } }
  */
 function validatePayload(body) {
-  const errors = [];
   if (!body || typeof body !== 'object') {
     return ['Request body must be a JSON object'];
   }
-  if (!body.name || typeof body.name !== 'string') {
+
+  const product = body.product;
+  if (!product || typeof product !== 'object') {
+    return ['Missing "product" object'];
+  }
+
+  const errors = [];
+  if (!product.name || typeof product.name !== 'string') {
     errors.push('Missing or invalid "name"');
   }
-  if (!Array.isArray(body.variants) || body.variants.length === 0) {
+  if (!Array.isArray(product.variants) || product.variants.length === 0) {
     errors.push('Missing or empty "variants" array');
   } else {
-    body.variants.forEach((v, i) => {
+    product.variants.forEach((v, i) => {
       if (!v || !v.sku) errors.push(`variants[${i}] is missing "sku"`);
     });
   }
@@ -62,7 +73,7 @@ async function createStripeVariant(stripe, product, variant) {
 }
 
 /**
- * @param {Object} body the raw Add to Store payload
+ * @param {Object} body the raw Add to Store payload — { ApliiqProductIds, product }
  * @param {Object} [deps] injectable for tests
  * @param {import('stripe')} [deps.stripe]
  * @param {typeof upsertProduct} [deps.upsert]
@@ -76,13 +87,22 @@ async function handleAddProduct(body, deps = {}) {
     return { storeProductId: null, hasError: true, errorMessages: errors };
   }
 
-  const internalProductId = deriveInternalProductIdFromVariants(body.variants);
+  const product = body.product;
+  const apliiqProductId =
+    Array.isArray(body.ApliiqProductIds) && body.ApliiqProductIds.length > 0 ? body.ApliiqProductIds[0] : null;
+
+  // ApliiqProductIds[0] is confirmed present and stable across real Add to
+  // Store calls for the same product, so it's the primary dedup key —
+  // the SKU-prefix derivation is now only a fallback for the (so far
+  // unobserved) case where it's missing. See docs/apliiq-webhooks.md.
+  const internalProductId =
+    apliiqProductId != null ? `apliiq-${apliiqProductId}` : deriveInternalProductIdFromVariants(product.variants);
 
   let variantsWithStripe;
   try {
     variantsWithStripe = [];
-    for (const variant of body.variants) {
-      variantsWithStripe.push(await createStripeVariant(stripe, body, variant));
+    for (const variant of product.variants) {
+      variantsWithStripe.push(await createStripeVariant(stripe, product, variant));
     }
   } catch (err) {
     return {
@@ -93,16 +113,22 @@ async function handleAddProduct(body, deps = {}) {
   }
 
   await upsert(internalProductId, {
-    name: body.name,
-    description: body.description || '',
-    imageUrls: body.imageUrls || [],
-    sizes: body.sizes || [],
-    colors: body.colors || [],
+    apliiqProductId: apliiqProductId != null ? String(apliiqProductId) : null,
+    name: product.name,
+    description: product.description || '',
+    imageUrls: product.imageUrls || [],
+    sizes: product.sizes || [],
+    colors: product.colors || [],
     variants: variantsWithStripe,
     provider: 'apliiq',
     source: 'apliiq-add-to-store',
     active: false,
   });
+
+  console.log(
+    `[apliiq/add-product] upserted ${internalProductId} — "${product.name}" ` +
+      `(${variantsWithStripe.length} variant${variantsWithStripe.length === 1 ? '' : 's'})`
+  );
 
   return { storeProductId: internalProductId, hasError: false, errorMessages: [] };
 }
@@ -124,21 +150,10 @@ async function handler(req, res) {
   }
 
   // Read the body ourselves rather than relying on Vercel's default
-  // bodyParser (which only parses req.body as JSON when Content-Type is
-  // application/json — if Apliiq sends anything else, req.body can come
-  // back empty/a raw string with no error, which looks identical to a
-  // genuinely-empty payload). This guarantees we see exactly what Apliiq
-  // sent regardless of headers.
+  // bodyParser, which only parses req.body as JSON when Content-Type is
+  // application/json — keeps this endpoint correct regardless of what
+  // header Apliiq sends.
   const rawBody = await readRawBody(req);
-
-  // TEMPORARY — investigating "Missing or invalid name" / "Missing or
-  // empty variants array" errors from a real Add to Store attempt.
-  // Remove this whole block (down to "END TEMPORARY") once the real
-  // payload shape is confirmed — see docs/apliiq-webhooks.md.
-  console.log('[apliiq/add-product] TEMP DEBUG content-type:', req.headers['content-type']);
-  console.log('[apliiq/add-product] TEMP DEBUG content-length header:', req.headers['content-length'], 'actual bytes:', rawBody.length);
-  console.log('[apliiq/add-product] TEMP DEBUG raw body:', rawBody.toString('utf8'));
-  // END TEMPORARY
 
   let body;
   try {
@@ -151,6 +166,9 @@ async function handler(req, res) {
 
   try {
     const result = await handleAddProduct(body);
+    if (result.hasError) {
+      console.error('[apliiq/add-product] failed:', result.errorMessages.join('; '));
+    }
     res.status(200).json(result);
   } catch (err) {
     // Never let this throw an unhandled 500 — Apliiq's UI surfaces

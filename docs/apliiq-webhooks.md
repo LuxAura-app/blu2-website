@@ -103,14 +103,34 @@ not anything Apliiq-generated.
 
 ## `api/apliiq/add-product.js`
 
-Receives the full product payload (`name`, `description`, `imageUrls`,
-`sizes`, `colors`, `variants[]` — each with `sku`, `price`, `color`,
-`size`, `weight`). For each variant, creates one Stripe Product + Price
-(metadata `fulfillment_provider: apliiq`, `provider_variant_id: sku`;
-the payload's `price` is used only as the Price's starting `unit_amount`
-— Apliiq's cost/suggested price, not necessarily retail). Writes/updates
-the Redis catalog entry via `upsertProduct`, always `active: false`.
-Responds:
+**Confirmed real shape (captured from a live Add to Store call) —
+supersedes Apliiq's published docs example, which describes a flatter
+shape (`name`/`variants` at the top level, `store_ProductId: null`) that
+does not match what Apliiq actually sends:**
+
+```json
+{
+  "ApliiqProductIds": [5989067],
+  "product": {
+    "name": "...",
+    "description": "...",
+    "imageUrls": ["..."],
+    "sizes": ["..."],
+    "colors": ["..."],
+    "variants": [
+      { "sku": "APQ-5989067S1A1", "price": 24.5, "color": "...", "size": "...", "weight": 0.4 }
+    ]
+  }
+}
+```
+
+Everything product-shaped is nested under `product`; there is no
+`store_ProductId` field anywhere in the real payload. For each variant in
+`product.variants`, creates one Stripe Product + Price (metadata
+`fulfillment_provider: apliiq`, `provider_variant_id: sku`; the payload's
+`price` is used only as the Price's starting `unit_amount` — Apliiq's
+cost/suggested price, not necessarily retail). Writes/updates the Redis
+catalog entry via `upsertProduct`, always `active: false`. Responds:
 
 ```json
 { "storeProductId": "your-internal-product-id", "hasError": false, "errorMessages": [] }
@@ -120,16 +140,18 @@ or, on a validation/Stripe failure, `hasError: true` with human-readable
 strings in `errorMessages` — this route never throws an unhandled 500,
 since Apliiq's UI surfaces whatever is sent back.
 
-### Open item — does `store_ProductId` persist across calls?
+### Resolved — the dedup key is `ApliiqProductIds[0]`, not `store_ProductId`
 
-`store_ProductId` in the incoming payload is `null` on first creation.
-It's unconfirmed whether Apliiq expects the id returned here to be
-persisted and passed back on later update calls for the *same* product, or
-whether every call should be treated as create-or-update-by-SKU
-regardless. Until confirmed, `deriveInternalProductIdFromVariants`
-(`lib/product-catalog.js`) keys the catalog entry off the shared numeric
-prefix in the variants' `APQ-{digits}S{n}A{n}` SKUs, ignoring whatever
-`store_ProductId` Apliiq sends — so a re-sent payload for the same product
-updates one entry rather than creating a duplicate, independent of how
-Apliiq's side behaves. Confirm with Apliiq support and simplify this once
-their intent is known.
+The originally-assumed `store_ProductId` field doesn't actually appear in
+real payloads at all, so the "does it persist across calls" question is
+moot — it was based on Apliiq's docs example, not reality. The real
+payload's top-level `ApliiqProductIds[0]` is confirmed present and stable
+across calls for the same product, and matches the numeric prefix shared
+by all of that product's variant SKUs (`APQ-5989067S1A1` ↔
+`ApliiqProductIds: [5989067]`). `handleAddProduct`
+(`api/apliiq/add-product.js`) now keys the catalog entry as
+`apliiq-{ApliiqProductIds[0]}` and stores it on the record as
+`apliiqProductId`. `deriveInternalProductIdFromVariants`
+(`lib/product-catalog.js`, keying off the shared SKU prefix instead) is
+kept only as a fallback for the case — not yet observed in practice — where
+`ApliiqProductIds` is missing.
