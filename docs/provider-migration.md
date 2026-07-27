@@ -27,10 +27,12 @@ not a rewrite. To add a provider (call it `newco`):
    original spec) need no changes — they're already generic over whatever
    provider name shows up in Stripe product metadata.
 6. If the provider can push tracking/status updates, add
-   `api/newco-webhook.js` following the same pattern as
-   `api/apliiq-webhook.js`: validate the request (signed if the provider
-   supports it, an unguessable token if not), look up the order via
-   `findOrderByProviderOrderId` in `lib/order-log.js`, and tolerate
-   duplicate delivery.
+   `api/newco/webhook.js` (or split into multiple endpoints if the provider
+   documents several, the way Apliiq does) following the same pattern as
+   `api/apliiq/fulfillment.js`: verify the request (a real signature scheme
+   if the provider documents one — see `lib/fulfillment/apliiq-hmac.js` for
+   the HMAC pattern — or an unguessable shared token if not), look up the
+   order via `findOrderByProviderOrderId` in `lib/order-log.js`, and
+   tolerate duplicate delivery.
 7. Add tests mirroring `tests/apliiq-mapping.test.js` — payload/address
    mapping and status normalization against fixtures, no live API calls.

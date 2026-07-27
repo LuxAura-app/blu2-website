@@ -10,10 +10,15 @@ Covers `groupItemsByProvider`, the idempotency claim/complete paths
 (mocked Redis client — first claim succeeds, a second claim on the same
 event no-ops, a simulated Redis error on claim fails closed, a simulated
 error on the completion write doesn't throw), inventory decrement/oversold
-paths (mocked Redis client), and the Apliiq auth signer + order payload
-mapping (fixtures, no live calls). No test in this suite ever places a
-live Apliiq order or calls a real API — see the Apliiq section below for
-why that matters.
+paths (mocked Redis client), the Apliiq auth signer + order payload
+mapping (fixtures, no live calls), the inbound `x-apliiq-hmac` verification
+(`tests/apliiq-hmac.test.js` — valid/tampered/wrong-secret/missing-header,
+against a fixed payload+secret so the expected hash is a known value),
+Product Search's catalog filtering (`tests/product-search.test.js`), and
+Add to Store's Stripe/Redis writes plus its validation-error path
+(`tests/add-product.test.js`, mocked Stripe and catalog upsert). No test in
+this suite ever places a live Apliiq order or calls a real API — see the
+Apliiq section below for why that matters.
 
 ## Product activation check
 
@@ -22,12 +27,15 @@ node scripts/validate-products.js          # skips live Stripe price checks
 STRIPE_SECRET_KEY=sk_test_... node scripts/validate-products.js   # full check
 ```
 
-Reads `PRODUCTS` out of `shop.html`, prints every activation problem it
-finds (missing/placeholder `priceId` or `providerVariantId`, an
-unconfigured or unsupported `fulfillmentProvider`, a missing product
-image) rather than stopping at the first. Draft products (`active: false`)
-report as informational, not blocking — only `active: true` products fail
-the check.
+Reads the Redis product catalog (`lib/product-catalog.js`), flattens each
+product's variants the same way `api/products.js` does, and prints every
+activation problem it finds (missing/placeholder `priceId` or
+`providerVariantId`, an unconfigured or unsupported `fulfillmentProvider`,
+a missing product image) rather than stopping at the first. Draft entries
+(`active: false`) report as informational, not blocking — only
+`active: true` entries fail the check. Needs real Redis credentials set
+(see `docs/shop-architecture.md`); against an empty catalog it just reports
+nothing to validate yet.
 
 ## Running the shop locally
 

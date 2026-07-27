@@ -18,7 +18,8 @@ lives there — catalog/provider mapping stays in Stripe Product metadata
 |---|---|
 | Payment, line items, customer/shipping details | Stripe Dashboard (source of truth) |
 | Product ↔ fulfillment provider/variant mapping | Stripe Product metadata (`fulfillment_provider`, `provider_variant_id`) |
-| Apliiq production/shipping status | Apliiq's own dashboard |
+| Public product catalog (what `shop.html` renders) | Redis `product:{internalProductId}` + `products:index` (`lib/product-catalog.js`), served via `api/products.js` |
+| Apliiq production/shipping status | Apliiq's own dashboard, plus `tracking`/`providerStatus` on the Redis order record once `api/apliiq/fulfillment.js` receives a callback |
 | Denormalized order record for reporting | Redis `order:{stripeSessionId}` (`lib/order-log.js`) |
 | Revenue/units/provider breakdown | `api/admin/orders-report.js` (reads the Redis order log) |
 | Consented marketing contacts | Redis `contacts:index` (`api/admin/contacts-export.js`) |
@@ -81,6 +82,19 @@ One group failing:
   isn't gated by re-checking the provider, only by the idempotency claim
   already having been taken for this Stripe event.
 
+## Product catalog and variant flattening
+
+`shop.html` fetches `GET /api/products` instead of hardcoding a `PRODUCTS`
+array. `lib/product-catalog.js`'s `flattenProductToCards` turns each
+catalog record's `variants[]` into **one storefront card per variant** —
+e.g. a tee with 3 colors × 4 sizes renders as 12 cards. This is a
+deliberate choice, not an oversight: the storefront has no size/color
+picker UI, and building one is explicitly out of scope for this pass. If
+that stops being acceptable (too many near-duplicate cards once Apliiq
+pushes larger size/color grids via Add to Store), the fix is a picker
+component in `shop.html` plus a change to `flattenProductToCards` — the
+catalog data itself doesn't need to change shape.
+
 ## Known v1 limitations
 
 - **Inventory tracking** (`lib/inventory.js`) is a simple counter
@@ -95,4 +109,13 @@ One group failing:
 - **Recipient addresses only store a 2-letter state/country code**, not
   full names — see docs/apliiq-setup.md for where that's an approximation
   in the Apliiq payload mapping.
-- **The Apliiq inbound webhook is unverified** — see docs/apliiq-setup.md.
+- **Product Search and Add to Store have no documented authentication** —
+  see docs/apliiq-webhooks.md. The compensating control is that Add to
+  Store can only ever create inactive draft catalog entries, never a live,
+  purchasable product.
+- **Which secret signs the inbound Fulfillment/Warehouse Shipment Complete
+  HMAC is an assumption** (reusing `APLIIQ_SHARED_SECRET`), not a confirmed
+  fact — see docs/apliiq-webhooks.md.
+- **`findOrderByProviderOrderId` is a linear scan** over `orders:index`
+  (`lib/order-log.js`) rather than a dedicated reverse-lookup key — fine at
+  storefront volumes, not at scale.

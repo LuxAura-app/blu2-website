@@ -498,7 +498,7 @@ footer a:hover { color: var(--off-white); }
 </div>
 
 <div class="shop-note">
-  Product photography coming soon — cards render from live data (name, price, image) in <code>PRODUCTS</code> at the bottom of this file, so swapping in real photos is a one-line edit per item. A product only appears here once it has a real Stripe Price and fulfillment metadata — see <code>scripts/validate-products.js</code>.
+  Product photography coming soon — cards render from the live catalog at <code>/api/products</code>, so swapping in real photos is a one-line edit per catalog entry. A product only appears here once it has a real Stripe Price and fulfillment metadata and has been flipped active — see <code>scripts/validate-products.js</code>.
 </div>
 
 <footer>
@@ -532,57 +532,27 @@ footer a:hover { color: var(--off-white); }
 <script>
 /* ────────────────────────────────────────────
    PRODUCT DATA
-   Replace `image` with a real path (e.g. "img/shop/tee-blu2.jpg")
-   once photography is ready — the placeholder art is used
-   automatically whenever an image is missing or fails to load.
-
-   A product is only rendered/purchasable once `active: true` —
-   see §11 of the fulfillment spec / scripts/validate-products.js.
-   `priceId` must be a real Stripe Price ID before activation.
-   `fulfillmentProvider` + `providerVariantId` map to the Stripe
-   Product metadata read by api/stripe-webhook.js.
+   Fetched from /api/products on load (Redis-backed catalog — see
+   docs/shop-architecture.md) instead of hardcoded here. Each entry is
+   already shaped for buildProductCard: id, name, desc, priceCents,
+   priceId, badge, image, placeholderWord, fulfillmentProvider,
+   providerVariantId, active. The endpoint only ever returns active:true
+   entries; a product becomes purchasable by flipping its Redis catalog
+   entry active once it has a real Stripe Price and imagery — see §11 of
+   the fulfillment spec / scripts/validate-products.js.
 ──────────────────────────────────────────── */
-const PRODUCTS = [
-  {
-    id: "blu2-tee",
-    name: "“Better Left Unsaid 2” Tee",
-    desc: "Pitch-black heavyweight tee. Full front print — burning rose art, “BETTER LEFT” in clean uppercase, “UNSAID 2” in burnt-orange script.",
-    priceCents: 4500,
-    priceId: "REPLACE_WITH_STRIPE_PRICE_ID",
-    badge: "New",
-    image: "img/shop/blu2-tee.jpg",
-    placeholderWord: "BETTER LEFT<br/><span>UNSAID 2</span>",
-    fulfillmentProvider: "apliiq",
-    providerVariantId: "REPLACE_WITH_APLIIQ_VARIANT_ID",
-    active: false
-  },
-  {
-    id: "blu2-hoodie",
-    name: "Better Left Unsaid 2 Hoodie",
-    desc: "Black garment-dyed hoodie with the burning rose front print, hood-lined in burnt orange.",
-    priceCents: 6500,
-    priceId: "REPLACE_WITH_STRIPE_PRICE_ID",
-    badge: null,
-    image: "img/shop/blu2-hoodie.jpg",
-    placeholderWord: "BETTER LEFT<br/><span>UNSAID 2</span>",
-    fulfillmentProvider: "apliiq",
-    providerVariantId: "REPLACE_WITH_APLIIQ_VARIANT_ID",
-    active: false
-  },
-  {
-    id: "afd-snapback",
-    name: "AFD Snapback",
-    desc: "Structured black snapback with an embroidered AFD logo patch above the brim.",
-    priceCents: 3000,
-    priceId: "REPLACE_WITH_STRIPE_PRICE_ID",
-    badge: null,
-    image: "img/shop/afd-cap.jpg",
-    placeholderWord: "AFD",
-    fulfillmentProvider: "apliiq",
-    providerVariantId: "REPLACE_WITH_APLIIQ_VARIANT_ID",
-    active: false
+let PRODUCTS = [];
+
+async function loadProducts() {
+  try {
+    const res = await fetch("/api/products");
+    if (!res.ok) throw new Error("bad response");
+    const data = await res.json();
+    PRODUCTS = Array.isArray(data) ? data : [];
+  } catch (e) {
+    PRODUCTS = [];
   }
-];
+}
 
 function formatPrice(cents) {
   return "$" + (cents / 100).toFixed(2);
@@ -799,7 +769,9 @@ function showCheckoutBanner() {
   banner.style.display = "block";
 }
 
-(function init() {
+(async function init() {
+  await loadProducts();
+
   const grid = document.getElementById("shop-grid");
   const activeProducts = PRODUCTS.filter((p) => p.active);
   const reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;

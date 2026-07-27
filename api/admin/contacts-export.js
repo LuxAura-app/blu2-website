@@ -36,7 +36,8 @@ module.exports = async (req, res) => {
     return;
   }
 
+  const storeSlug = (process.env.STORE_NAME || 'store').toLowerCase().replace(/[^a-z0-9]+/g, '-');
   res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="blu2-contacts.csv"');
+  res.setHeader('Content-Disposition', `attachment; filename="${storeSlug}-contacts.csv"`);
   res.status(200).send(toCsv(rows));
 };

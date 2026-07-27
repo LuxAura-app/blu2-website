@@ -4,9 +4,10 @@
 
 Everything below the auth/create-order/status sections was verified against
 Apliiq's own help portal (`help.apliiq.com`) while this integration was
-built. Two things were **not** found anywhere in their published docs and
-are called out explicitly rather than guessed at — see "Order status
-updates" below before you rely on either.
+built. A handful of things were **not** found anywhere in their published
+docs and are called out explicitly rather than guessed at — see "Order
+status updates" below and `docs/apliiq-webhooks.md` before you rely on any
+of them.
 
 ### Authentication (confirmed)
 
@@ -57,45 +58,43 @@ over this, that's the first thing to check.
 `New`, `Preparing To Release`, `Ready To Release`, `In Production`,
 `Ready To Ship`, `On Hold`, `Payment Pending`, `Shipped`.
 
-### Order status updates — NOT confirmed
+### Order status updates — confirmed, four endpoints
 
-Two things could not be found anywhere in Apliiq's published docs, despite
-a real search pass (not a guess):
+The four Apliiq webhook endpoints (Fulfillment, Warehouse Shipment
+Complete, Product Search, Add to Store), their payload shapes, the HMAC
+verification scheme, and the open items still needing Apliiq support
+confirmation are documented in full in `docs/apliiq-webhooks.md` — read
+that before registering callback URLs in Apliiq's dashboard.
 
-1. **A GET-order-status endpoint.** `lib/fulfillment/apliiq-client.js`'s
-   `getOrder()` guesses `GET /v1/Order/{id}` by analogy with the confirmed
-   `POST /v1/Order`, but this is unverified — don't build anything that
-   depends on it working until you've confirmed it against a real account
-   or with Apliiq support.
-2. **A generic webhook/callback URL setting for custom API integrations.**
-   Every tracking-push doc found (e.g. "How does tracking and fulfillment
-   work with dropshipping") describes automatic behavior specific to
-   Apliiq's *Shopify app* — nothing about registering a callback URL for a
-   custom REST integration like this one.
+One thing still unverified regardless of the four webhooks above:
 
-`api/apliiq-webhook.js` is built defensively (token-protected via
-`?token=`, tolerant of duplicate delivery, validates an unknown payload
-shape before using it) so it's ready *if* Apliiq can call it — but **ask
-Apliiq support directly** whether a callback URL can be registered for a
-custom integration before assuming this endpoint will ever receive traffic.
-Until confirmed, the only reliable way to check order status is Apliiq's
-own dashboard.
+- **A GET-order-status endpoint.** `lib/fulfillment/apliiq-client.js`'s
+  `getOrder()` guesses `GET /v1/Order/{id}` by analogy with the confirmed
+  `POST /v1/Order`, but this is unverified — don't build anything that
+  depends on it working until you've confirmed it against a real account
+  or with Apliiq support. Order status is otherwise driven by the
+  Fulfillment webhook (`api/apliiq/fulfillment.js`) or Apliiq's own
+  dashboard.
 
 ## Mapping a product/variant into Stripe
 
-1. Create the product and its variants in Apliiq (or in your Apliiq
-   dashboard's product catalog).
-2. For each Stripe Price representing one variant (e.g. "Tee — Black — M"),
-   set this Product metadata in the Stripe Dashboard:
-   - `fulfillment_provider` = `apliiq`
-   - `provider_variant_id` = the Apliiq SKU, format `APQ-########S#A#`
-3. In `shop.html`'s `PRODUCTS` array, set that entry's `priceId` to the real
-   Stripe Price ID and `providerVariantId` to the same Apliiq SKU (used for
-   local logging/consistency — the source of truth for fulfillment is the
-   Stripe metadata, read at webhook time).
-4. Run `node scripts/validate-products.js` (with `STRIPE_SECRET_KEY` set) —
+Products are **not** manually entered into `shop.html` anymore. The real
+flow, once the four webhook URLs are registered (`docs/apliiq-webhooks.md`):
+
+1. Build the product in Apliiq's own product builder (sizes, colors,
+   pricing, images).
+2. Click Apliiq's **"Add to Store"** button and select your custom store.
+3. Apliiq POSTs the full product/variant payload — including every real
+   `APQ-########S#A#` SKU — to `api/apliiq/add-product.js`.
+4. That endpoint automatically creates a Stripe Product/Price per variant
+   and writes a Redis catalog entry (`lib/product-catalog.js`), always
+   `active: false`.
+5. Review pricing (Apliiq's submitted price is their cost/suggested price,
+   not necessarily your retail price) and images.
+6. Run `node scripts/validate-products.js` (with `STRIPE_SECRET_KEY` set) —
    it won't stop at the first problem, so fix everything it lists.
-5. Only then flip that product's `active: false` to `active: true`.
+7. Only then flip that catalog entry's `active` to `true` (directly in
+   Redis for now — there's no admin UI for this in this pass).
 
 ## Test-order safeguards
 
