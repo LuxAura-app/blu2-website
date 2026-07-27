@@ -194,17 +194,19 @@ test('maps the real captured Add to Store payload to one Stripe Product/Price pe
   // ApliiqProductIds[0] is the primary dedup key now, not the SKU prefix.
   assert.equal(result.storeProductId, 'apliiq-5989067');
 
-  assert.equal(stripe.calls.products.length, 8);
+  // The real payload has 8 variants (s/m/l/xl/xxl/xxxl/4xl/5xl); only the
+  // first 5 (s through xxl) are within ALLOWED_SIZES.
+  assert.equal(stripe.calls.products.length, 5);
   assert.equal(stripe.calls.products[0].metadata.fulfillment_provider, 'apliiq');
   assert.equal(stripe.calls.products[0].metadata.provider_variant_id, 'APQ-5989067S6A1');
 
-  assert.equal(stripe.calls.prices.length, 8);
+  assert.equal(stripe.calls.prices.length, 5);
   assert.equal(stripe.calls.prices[0].unit_amount, 4500);
   // Product-level currency is uppercase ("USD") in real payloads — Stripe
   // requires lowercase.
   assert.equal(stripe.calls.prices[0].currency, 'usd');
-  // Prices vary by size (45.00 up to 53.50) — spot check a higher tier.
-  assert.equal(stripe.calls.prices[7].unit_amount, 5350);
+  // Last allowed size (xxl) — 47.50.
+  assert.equal(stripe.calls.prices[4].unit_amount, 4750);
 
   assert.equal(upsert.calls.length, 1);
   const patch = upsert.calls[0].patch;
@@ -214,13 +216,37 @@ test('maps the real captured Add to Store payload to one Stripe Product/Price pe
   assert.equal(patch.source, 'apliiq-add-to-store');
   assert.equal(patch.name, 'Better Left Unsaid 2 Tee Mali V');
   assert.equal(patch.type, 'tshirts');
-  assert.equal(patch.variants.length, 8);
+  assert.equal(patch.variants.length, 5);
+  assert.deepEqual(
+    patch.variants.map((v) => v.size),
+    ['s', 'm', 'l', 'xl', 'xxl']
+  );
+  assert.ok(!patch.variants.some((v) => ['xxxl', '4xl', '5xl'].includes(v.size)));
   assert.equal(patch.variants[0].stripePriceId, 'price_1');
   // Per-variant imageUrl and weightUnit are captured on the stored variant
   // record (used preferentially over the product-level imageUrls list).
   assert.equal(patch.variants[0].imageUrl, 'https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg');
   assert.equal(patch.variants[0].weightUnit, 'oz');
   assert.equal(patch.variants[0].weight, 7.0);
+});
+
+test('oversized variants (xxxl/4xl/5xl) never reach Stripe, even individually', async () => {
+  const stripe = fakeStripe();
+  const upsert = fakeUpsert();
+  const payload = {
+    ApliiqProductIds: [5989067],
+    product: {
+      ...REAL_PAYLOAD.product,
+      variants: REAL_PAYLOAD.product.variants.filter((v) => ['xxxl', '4xl', '5xl'].includes(v.size)),
+    },
+  };
+
+  const result = await handleAddProduct(payload, { stripe, upsert });
+
+  assert.equal(result.hasError, true);
+  assert.match(result.errorMessages[0], /No variants within the allowed size range/);
+  assert.equal(stripe.calls.products.length, 0);
+  assert.equal(upsert.calls.length, 0);
 });
 
 test('falls back to the SKU-prefix derivation when ApliiqProductIds is absent', async () => {

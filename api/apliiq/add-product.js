@@ -1,6 +1,16 @@
 const Stripe = require('stripe');
 const { upsertProduct, deriveInternalProductIdFromVariants } = require('../../lib/product-catalog');
 
+// Only these sizes are currently sold — Apliiq's full size range for this
+// blank (up to 5xl) isn't offered. Any variant outside this list is
+// dropped before a Stripe Product/Price is ever created for it, so
+// oversized sizes can never end up live in Stripe or the catalog.
+const ALLOWED_SIZES = ['s', 'm', 'l', 'xl', 'xxl'];
+
+function isAllowedSize(size) {
+  return ALLOWED_SIZES.includes(String(size || '').trim().toLowerCase());
+}
+
 /**
  * Apliiq's docs don't document any authentication for Add to Store either
  * (same gap as Product Search) — the compensating control is that nothing
@@ -106,10 +116,28 @@ async function handleAddProduct(body, deps = {}) {
   const internalProductId =
     apliiqProductId != null ? `apliiq-${apliiqProductId}` : deriveInternalProductIdFromVariants(product.variants);
 
+  const allowedVariants = product.variants.filter((v) => isAllowedSize(v.size));
+  const skippedSizes = product.variants.filter((v) => !isAllowedSize(v.size)).map((v) => v.size);
+  if (skippedSizes.length > 0) {
+    console.log(`[apliiq/add-product] ${internalProductId}: skipping disallowed sizes [${skippedSizes.join(', ')}]`);
+  }
+
+  if (allowedVariants.length === 0) {
+    return {
+      storeProductId: null,
+      hasError: true,
+      errorMessages: [
+        `No variants within the allowed size range (${ALLOWED_SIZES.join(', ')}) — payload only had: ${product.variants
+          .map((v) => v.size)
+          .join(', ')}`,
+      ],
+    };
+  }
+
   let variantsWithStripe;
   try {
     variantsWithStripe = [];
-    for (const variant of product.variants) {
+    for (const variant of allowedVariants) {
       variantsWithStripe.push(await createStripeVariant(stripe, product, variant));
     }
   } catch (err) {

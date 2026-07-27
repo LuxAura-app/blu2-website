@@ -167,6 +167,19 @@ or, on a validation/Stripe failure, `hasError: true` with human-readable
 strings in `errorMessages` — this route never throws an unhandled 500,
 since Apliiq's UI surfaces whatever is sent back.
 
+### Size restriction — `ALLOWED_SIZES`
+
+This blank isn't sold above `xxl`. `ALLOWED_SIZES = ['s', 'm', 'l', 'xl', 'xxl']`
+in `api/apliiq/add-product.js` filters `product.variants` by
+`variant.size` (case-insensitive) *before* any Stripe Product/Price is
+created, so an oversized size (`xxxl`, `4xl`, `5xl`, ...) can never end up
+live in Stripe or the catalog — not "created then hidden," never created
+at all. If every variant in a payload falls outside the allowed range, the
+whole request returns `hasError: true` rather than upserting an
+empty-variants catalog entry. This is a deliberate business rule (assortment
+limited to s–xxl for this item), not an Apliiq quirk — adjust the array if
+the allowed range changes.
+
 ### Resolved — the dedup key is `ApliiqProductIds[0]`, not `store_ProductId`
 
 The originally-assumed `store_ProductId` field doesn't actually appear in
