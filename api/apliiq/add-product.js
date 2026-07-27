@@ -107,6 +107,15 @@ async function handleAddProduct(body, deps = {}) {
   return { storeProductId: internalProductId, hasError: false, errorMessages: [] };
 }
 
+function readRawBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', (chunk) => chunks.push(chunk));
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+
 async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -114,8 +123,34 @@ async function handler(req, res) {
     return;
   }
 
+  // Read the body ourselves rather than relying on Vercel's default
+  // bodyParser (which only parses req.body as JSON when Content-Type is
+  // application/json — if Apliiq sends anything else, req.body can come
+  // back empty/a raw string with no error, which looks identical to a
+  // genuinely-empty payload). This guarantees we see exactly what Apliiq
+  // sent regardless of headers.
+  const rawBody = await readRawBody(req);
+
+  // TEMPORARY — investigating "Missing or invalid name" / "Missing or
+  // empty variants array" errors from a real Add to Store attempt.
+  // Remove this whole block (down to "END TEMPORARY") once the real
+  // payload shape is confirmed — see docs/apliiq-webhooks.md.
+  console.log('[apliiq/add-product] TEMP DEBUG content-type:', req.headers['content-type']);
+  console.log('[apliiq/add-product] TEMP DEBUG content-length header:', req.headers['content-length'], 'actual bytes:', rawBody.length);
+  console.log('[apliiq/add-product] TEMP DEBUG raw body:', rawBody.toString('utf8'));
+  // END TEMPORARY
+
+  let body;
   try {
-    const result = await handleAddProduct(req.body);
+    body = rawBody.length ? JSON.parse(rawBody.toString('utf8')) : {};
+  } catch (err) {
+    console.error('[apliiq/add-product] request body was not valid JSON', err.message);
+    res.status(200).json({ storeProductId: null, hasError: true, errorMessages: [`Invalid JSON body: ${err.message}`] });
+    return;
+  }
+
+  try {
+    const result = await handleAddProduct(body);
     res.status(200).json(result);
   } catch (err) {
     // Never let this throw an unhandled 500 — Apliiq's UI surfaces
@@ -126,5 +161,6 @@ async function handler(req, res) {
   }
 }
 
+handler.config = { api: { bodyParser: false } };
 handler.handleAddProduct = handleAddProduct; // exported for tests
 module.exports = handler;
