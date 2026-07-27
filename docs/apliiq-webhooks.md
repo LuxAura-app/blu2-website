@@ -112,25 +112,52 @@ does not match what Apliiq actually sends:**
 {
   "ApliiqProductIds": [5989067],
   "product": {
-    "name": "...",
-    "description": "...",
-    "imageUrls": ["..."],
-    "sizes": ["..."],
-    "colors": ["..."],
+    "type": "tshirts",
+    "name": "Better Left Unsaid 2 Tee Mali V",
+    "currency": "USD",
+    "description": "",
+    "imageUrls": ["https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg", "..."],
+    "replaceProduct": false,
+    "sizes": ["s", "m", "l", "xl", "xxl", "xxxl", "4xl", "5xl"],
+    "colors": ["black"],
     "variants": [
-      { "sku": "APQ-5989067S1A1", "price": 24.5, "color": "...", "size": "...", "weight": 0.4 }
+      {
+        "sku": "APQ-5989067S6A1",
+        "price": 45.0,
+        "color": "black",
+        "size": "s",
+        "imageUrl": "https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg",
+        "weight": 7.0,
+        "weightUnit": "oz",
+        "default": true,
+        "width": 7.0,
+        "height": 1.0,
+        "length": 10.0,
+        "dimensionUnit": "in"
+      }
     ]
   }
 }
 ```
+
+(Trimmed to one variant and one image URL for readability — the real
+payload had 8 variants, one per size, and 16 duplicated image URLs at the
+product level; see the full fixture in `tests/add-product.test.js`.)
 
 Everything product-shaped is nested under `product`; there is no
 `store_ProductId` field anywhere in the real payload. For each variant in
 `product.variants`, creates one Stripe Product + Price (metadata
 `fulfillment_provider: apliiq`, `provider_variant_id: sku`; the payload's
 `price` is used only as the Price's starting `unit_amount` — Apliiq's
-cost/suggested price, not necessarily retail). Writes/updates the Redis
-catalog entry via `upsertProduct`, always `active: false`. Responds:
+cost/suggested price, not necessarily retail; `currency` is normalized to
+lowercase for Stripe, since the real payload sends `"USD"`). Writes/updates
+the Redis catalog entry via `upsertProduct`, always `active: false` —
+including, per variant, its own `imageUrl` (used preferentially over the
+product-level `imageUrls` list when rendering storefront cards, since real
+payloads give each size its own image rather than sharing one) and
+`weightUnit` alongside the existing `weight` field. `type` (Apliiq's
+garment-type label, e.g. `"tshirts"`) is stored but not currently used by
+anything. Responds:
 
 ```json
 { "storeProductId": "your-internal-product-id", "hasError": false, "errorMessages": [] }
@@ -155,3 +182,16 @@ by all of that product's variant SKUs (`APQ-5989067S1A1` ↔
 (`lib/product-catalog.js`, keying off the shared SKU prefix instead) is
 kept only as a fallback for the case — not yet observed in practice — where
 `ApliiqProductIds` is missing.
+
+### Open item — `product.replaceProduct`
+
+The real payload includes a top-level `product.replaceProduct` boolean
+(observed as `false`) not mentioned anywhere in Apliiq's published docs.
+It's not currently read or acted on — `upsertProduct` always merges the
+incoming payload into whatever catalog entry already exists at that id, it
+never distinguishes "replace" from "merge/update" semantics. If Apliiq
+sends `replaceProduct: true` to mean "wipe existing variants/images and
+start over" (a plausible reading, unconfirmed), a merge-only upsert could
+leave stale variants around after a real edit in Apliiq's product builder.
+Worth asking Apliiq support what it means before building logic around it
+— guessing wrong here risks silently losing or duplicating catalog data.

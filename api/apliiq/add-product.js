@@ -57,7 +57,10 @@ async function createStripeVariant(stripe, product, variant) {
   const unitAmount = Math.round((Number(variant.price) || 0) * 100);
   const stripePrice = await stripe.prices.create({
     product: stripeProduct.id,
-    currency: 'usd',
+    // Real payloads include an uppercase product-level `currency` (e.g.
+    // "USD") — Stripe requires lowercase, so this normalizes rather than
+    // hardcoding 'usd', while still defaulting to it if currency is absent.
+    currency: (product.currency || 'usd').toLowerCase(),
     unit_amount: unitAmount,
   });
 
@@ -66,6 +69,11 @@ async function createStripeVariant(stripe, product, variant) {
     color: variant.color || null,
     size: variant.size || null,
     weight: variant.weight || null,
+    weightUnit: variant.weightUnit || null,
+    // Real payloads give each variant its own imageUrl (distinct per size),
+    // not just a shared product-level imageUrls list — used preferentially
+    // for that variant's storefront card, see flattenProductToCards.
+    imageUrl: variant.imageUrl || null,
     priceCents: unitAmount,
     stripeProductId: stripeProduct.id,
     stripePriceId: stripePrice.id,
@@ -116,6 +124,9 @@ async function handleAddProduct(body, deps = {}) {
     apliiqProductId: apliiqProductId != null ? String(apliiqProductId) : null,
     name: product.name,
     description: product.description || '',
+    // Informational only, not currently used by anything — Apliiq's
+    // garment-type field (e.g. "tshirts").
+    type: product.type || null,
     imageUrls: product.imageUrls || [],
     sizes: product.sizes || [],
     colors: product.colors || [],

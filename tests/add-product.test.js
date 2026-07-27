@@ -3,26 +3,153 @@ const assert = require('node:assert/strict');
 const { handleAddProduct } = require('../api/apliiq/add-product');
 
 /**
- * Real production shape, captured from Vercel logs on a live Add to Store
- * attempt — NOT the shape described in Apliiq's published docs, which
- * doesn't nest under `product` or include `ApliiqProductIds` at all. This
- * is the confirmed real contract; docs/apliiq-webhooks.md has been updated
- * to match. (The exact variant/image values below weren't part of what was
- * pasted back — only the top-level shape was — so those are representative
- * rather than byte-for-byte captured; the structural shape is what this
- * test is verifying.)
+ * Byte-exact real production payload, captured from Vercel logs on a live
+ * Add to Store attempt (2026-07-27, deployment dpl_GNRhsPoVVnFjYznBaSiJFBtxESLj)
+ * — NOT the shape described in Apliiq's published docs, which doesn't nest
+ * under `product` or include `ApliiqProductIds` at all. This is the
+ * confirmed real contract; docs/apliiq-webhooks.md has been updated to match.
  */
 const REAL_PAYLOAD = {
   ApliiqProductIds: [5989067],
   product: {
-    name: 'Better Left Unsaid 2 Tee',
-    description: 'Heavyweight tee, full front print.',
-    imageUrls: ['https://example.com/tee-black.jpg'],
-    sizes: ['S', 'M'],
-    colors: ['Black'],
+    type: 'tshirts',
+    name: 'Better Left Unsaid 2 Tee Mali V',
+    currency: 'USD',
+    description: '',
+    imageUrls: [
+      'https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg',
+      'https://blob.apliiq.com/sitestorage/resized-products/5989067_7120_590_900.jpg',
+      'https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg',
+      'https://blob.apliiq.com/sitestorage/resized-products/5989067_7120_590_900.jpg',
+      'https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg',
+      'https://blob.apliiq.com/sitestorage/resized-products/5989067_7120_590_900.jpg',
+      'https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg',
+      'https://blob.apliiq.com/sitestorage/resized-products/5989067_7120_590_900.jpg',
+      'https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg',
+      'https://blob.apliiq.com/sitestorage/resized-products/5989067_7120_590_900.jpg',
+      'https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg',
+      'https://blob.apliiq.com/sitestorage/resized-products/5989067_7120_590_900.jpg',
+      'https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg',
+      'https://blob.apliiq.com/sitestorage/resized-products/5989067_7120_590_900.jpg',
+      'https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg',
+      'https://blob.apliiq.com/sitestorage/resized-products/5989067_7120_590_900.jpg',
+    ],
+    replaceProduct: false,
+    sizes: ['s', 'm', 'l', 'xl', 'xxl', 'xxxl', '4xl', '5xl'],
+    colors: ['black'],
     variants: [
-      { sku: 'APQ-5989067S1A1', price: 24.5, color: 'Black', size: 'S', weight: 0.4 },
-      { sku: 'APQ-5989067S2A1', price: 24.5, color: 'Black', size: 'M', weight: 0.4 },
+      {
+        sku: 'APQ-5989067S6A1',
+        price: 45.0,
+        color: 'black',
+        size: 's',
+        imageUrl: 'https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg',
+        weight: 7.0,
+        weightUnit: 'oz',
+        default: true,
+        width: 7.0,
+        height: 1.0,
+        length: 10.0,
+        dimensionUnit: 'in',
+      },
+      {
+        sku: 'APQ-5989067S7A1',
+        price: 45.0,
+        color: 'black',
+        size: 'm',
+        imageUrl: 'https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg',
+        weight: 7.9,
+        weightUnit: 'oz',
+        default: false,
+        width: 7.0,
+        height: 1.0,
+        length: 10.0,
+        dimensionUnit: 'in',
+      },
+      {
+        sku: 'APQ-5989067S8A1',
+        price: 45.0,
+        color: 'black',
+        size: 'l',
+        imageUrl: 'https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg',
+        weight: 7.9,
+        weightUnit: 'oz',
+        default: false,
+        width: 7.0,
+        height: 1.0,
+        length: 10.0,
+        dimensionUnit: 'in',
+      },
+      {
+        sku: 'APQ-5989067S1A1',
+        price: 45.0,
+        color: 'black',
+        size: 'xl',
+        imageUrl: 'https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg',
+        weight: 7.9,
+        weightUnit: 'oz',
+        default: false,
+        width: 7.0,
+        height: 1.0,
+        length: 10.0,
+        dimensionUnit: 'in',
+      },
+      {
+        sku: 'APQ-5989067S2A1',
+        price: 47.5,
+        color: 'black',
+        size: 'xxl',
+        imageUrl: 'https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg',
+        weight: 11.0,
+        weightUnit: 'oz',
+        default: false,
+        width: 7.0,
+        height: 1.0,
+        length: 10.0,
+        dimensionUnit: 'in',
+      },
+      {
+        sku: 'APQ-5989067S21A1',
+        price: 49.5,
+        color: 'black',
+        size: 'xxxl',
+        imageUrl: 'https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg',
+        weight: 11.9,
+        weightUnit: 'oz',
+        default: false,
+        width: 7.0,
+        height: 1.0,
+        length: 10.0,
+        dimensionUnit: 'in',
+      },
+      {
+        sku: 'APQ-5989067S61A1',
+        price: 51.5,
+        color: 'black',
+        size: '4xl',
+        imageUrl: 'https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg',
+        weight: 15.9,
+        weightUnit: 'oz',
+        default: false,
+        width: 7.0,
+        height: 1.0,
+        length: 10.0,
+        dimensionUnit: 'in',
+      },
+      {
+        sku: 'APQ-5989067S62A1',
+        price: 53.5,
+        color: 'black',
+        size: '5xl',
+        imageUrl: 'https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg',
+        weight: 15.9,
+        weightUnit: 'oz',
+        default: false,
+        width: 7.0,
+        height: 1.0,
+        length: 10.0,
+        dimensionUnit: 'in',
+      },
     ],
   },
 };
@@ -67,22 +194,33 @@ test('maps the real captured Add to Store payload to one Stripe Product/Price pe
   // ApliiqProductIds[0] is the primary dedup key now, not the SKU prefix.
   assert.equal(result.storeProductId, 'apliiq-5989067');
 
-  assert.equal(stripe.calls.products.length, 2);
+  assert.equal(stripe.calls.products.length, 8);
   assert.equal(stripe.calls.products[0].metadata.fulfillment_provider, 'apliiq');
-  assert.equal(stripe.calls.products[0].metadata.provider_variant_id, 'APQ-5989067S1A1');
+  assert.equal(stripe.calls.products[0].metadata.provider_variant_id, 'APQ-5989067S6A1');
 
-  assert.equal(stripe.calls.prices.length, 2);
-  assert.equal(stripe.calls.prices[0].unit_amount, 2450);
+  assert.equal(stripe.calls.prices.length, 8);
+  assert.equal(stripe.calls.prices[0].unit_amount, 4500);
+  // Product-level currency is uppercase ("USD") in real payloads — Stripe
+  // requires lowercase.
   assert.equal(stripe.calls.prices[0].currency, 'usd');
+  // Prices vary by size (45.00 up to 53.50) — spot check a higher tier.
+  assert.equal(stripe.calls.prices[7].unit_amount, 5350);
 
   assert.equal(upsert.calls.length, 1);
+  const patch = upsert.calls[0].patch;
   assert.equal(upsert.calls[0].id, 'apliiq-5989067');
-  assert.equal(upsert.calls[0].patch.apliiqProductId, '5989067');
-  assert.equal(upsert.calls[0].patch.active, false);
-  assert.equal(upsert.calls[0].patch.source, 'apliiq-add-to-store');
-  assert.equal(upsert.calls[0].patch.name, 'Better Left Unsaid 2 Tee');
-  assert.equal(upsert.calls[0].patch.variants.length, 2);
-  assert.equal(upsert.calls[0].patch.variants[0].stripePriceId, 'price_1');
+  assert.equal(patch.apliiqProductId, '5989067');
+  assert.equal(patch.active, false);
+  assert.equal(patch.source, 'apliiq-add-to-store');
+  assert.equal(patch.name, 'Better Left Unsaid 2 Tee Mali V');
+  assert.equal(patch.type, 'tshirts');
+  assert.equal(patch.variants.length, 8);
+  assert.equal(patch.variants[0].stripePriceId, 'price_1');
+  // Per-variant imageUrl and weightUnit are captured on the stored variant
+  // record (used preferentially over the product-level imageUrls list).
+  assert.equal(patch.variants[0].imageUrl, 'https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg');
+  assert.equal(patch.variants[0].weightUnit, 'oz');
+  assert.equal(patch.variants[0].weight, 7.0);
 });
 
 test('falls back to the SKU-prefix derivation when ApliiqProductIds is absent', async () => {
@@ -94,7 +232,7 @@ test('falls back to the SKU-prefix derivation when ApliiqProductIds is absent', 
   const payload = {
     product: {
       ...REAL_PAYLOAD.product,
-      variants: [{ sku: 'APQ-4633445S1A1', price: 24.5, color: 'Black', size: 'S', weight: 0.4 }],
+      variants: [{ sku: 'APQ-4633445S1A1', price: 24.5, color: 'black', size: 's', weight: 7.0 }],
     },
   };
 
