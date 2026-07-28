@@ -14,3 +14,6 @@ memory/
 
 # Stray nested working copy (not part of the site)
 BLU2/
+
+.vercel
+.env*

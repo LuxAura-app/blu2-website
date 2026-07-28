@@ -1,5 +1,5 @@
 const Stripe = require('stripe');
-const { upsertProduct, deriveInternalProductIdFromVariants } = require('../../lib/product-catalog');
+const { upsertProduct, deriveInternalProductIdFromVariants, getProduct } = require('../../lib/product-catalog');
 
 // Only these sizes are currently sold — Apliiq's full size range for this
 // blank (up to 5xl) isn't offered. Any variant outside this list is
@@ -91,14 +91,57 @@ async function createStripeVariant(stripe, product, variant) {
 }
 
 /**
+ * Idempotency guard: a repeated Add to Store call for a SKU that's already
+ * on the catalog entry (whether Apliiq re-sends, or someone re-triggers it
+ * manually) must not mint a second Stripe Product/Price pair. The Product
+ * is reused as-is; a Price is only (re)created when the incoming amount
+ * actually differs, since Stripe Prices are immutable — the old one is
+ * archived so it stops showing as a second active price on the Product.
+ */
+async function reuseOrCreateStripeVariant(stripe, product, variant, existingVariant) {
+  if (!existingVariant || !existingVariant.stripeProductId) {
+    return createStripeVariant(stripe, product, variant);
+  }
+
+  const unitAmount = Math.round((Number(variant.price) || 0) * 100);
+  let stripePriceId = existingVariant.stripePriceId;
+
+  if (!stripePriceId || existingVariant.priceCents !== unitAmount) {
+    const stripePrice = await stripe.prices.create({
+      product: existingVariant.stripeProductId,
+      currency: (product.currency || 'usd').toLowerCase(),
+      unit_amount: unitAmount,
+    });
+    if (stripePriceId) {
+      await stripe.prices.update(stripePriceId, { active: false });
+    }
+    stripePriceId = stripePrice.id;
+  }
+
+  return {
+    sku: variant.sku,
+    color: variant.color || null,
+    size: variant.size || null,
+    weight: variant.weight || null,
+    weightUnit: variant.weightUnit || null,
+    imageUrl: variant.imageUrl || null,
+    priceCents: unitAmount,
+    stripeProductId: existingVariant.stripeProductId,
+    stripePriceId,
+  };
+}
+
+/**
  * @param {Object} body the raw Add to Store payload — { ApliiqProductIds, product }
  * @param {Object} [deps] injectable for tests
  * @param {import('stripe')} [deps.stripe]
  * @param {typeof upsertProduct} [deps.upsert]
+ * @param {typeof getProduct} [deps.getProduct]
  */
 async function handleAddProduct(body, deps = {}) {
   const stripe = deps.stripe || new Stripe(process.env.STRIPE_SECRET_KEY);
   const upsert = deps.upsert || upsertProduct;
+  const lookupProduct = deps.getProduct || getProduct;
 
   const errors = validatePayload(body);
   if (errors.length > 0) {
@@ -136,9 +179,18 @@ async function handleAddProduct(body, deps = {}) {
 
   let variantsWithStripe;
   try {
+    // Look up any existing catalog entry for this product so a repeated
+    // Add to Store call (Apliiq retry or a manual re-trigger) reuses each
+    // SKU's existing Stripe Product/Price instead of minting a duplicate
+    // set — see docs/apliiq-webhooks.md.
+    const existingProduct = await lookupProduct(internalProductId);
+    const existingVariantsBySku = new Map((existingProduct?.variants || []).map((v) => [v.sku, v]));
+
     variantsWithStripe = [];
     for (const variant of allowedVariants) {
-      variantsWithStripe.push(await createStripeVariant(stripe, product, variant));
+      variantsWithStripe.push(
+        await reuseOrCreateStripeVariant(stripe, product, variant, existingVariantsBySku.get(variant.sku))
+      );
     }
   } catch (err) {
     return {

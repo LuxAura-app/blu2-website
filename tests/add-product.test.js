@@ -155,7 +155,7 @@ const REAL_PAYLOAD = {
 };
 
 function fakeStripe() {
-  const calls = { products: [], prices: [] };
+  const calls = { products: [], prices: [], priceUpdates: [] };
   return {
     calls,
     products: {
@@ -168,6 +168,10 @@ function fakeStripe() {
       create: async (args) => {
         calls.prices.push(args);
         return { id: `price_${calls.prices.length}` };
+      },
+      update: async (id, args) => {
+        calls.priceUpdates.push({ id, args });
+        return { id };
       },
     },
   };
@@ -183,11 +187,22 @@ function fakeUpsert() {
   return fn;
 }
 
+function fakeGetProduct(record) {
+  const calls = [];
+  const fn = async (id) => {
+    calls.push(id);
+    return record;
+  };
+  fn.calls = calls;
+  return fn;
+}
+
 test('maps the real captured Add to Store payload to one Stripe Product/Price per variant, always active:false', async () => {
   const stripe = fakeStripe();
   const upsert = fakeUpsert();
+  const getProduct = fakeGetProduct(null);
 
-  const result = await handleAddProduct(REAL_PAYLOAD, { stripe, upsert });
+  const result = await handleAddProduct(REAL_PAYLOAD, { stripe, upsert, getProduct });
 
   assert.equal(result.hasError, false);
   assert.deepEqual(result.errorMessages, []);
@@ -262,7 +277,7 @@ test('falls back to the SKU-prefix derivation when ApliiqProductIds is absent', 
     },
   };
 
-  const result = await handleAddProduct(payload, { stripe, upsert });
+  const result = await handleAddProduct(payload, { stripe, upsert, getProduct: fakeGetProduct(null) });
 
   assert.equal(result.hasError, false);
   assert.equal(result.storeProductId, 'apliiq-4633445');
@@ -304,9 +319,110 @@ test('a variant missing a sku is reported without throwing', async () => {
 
   const result = await handleAddProduct(
     { ApliiqProductIds: [123], product: { name: 'Test Product', variants: [{ price: 10 }] } },
-    { stripe, upsert }
+    { stripe, upsert, getProduct: fakeGetProduct(null) }
   );
 
   assert.equal(result.hasError, true);
   assert.match(result.errorMessages[0], /sku/);
+});
+
+test('a repeated Add to Store call reuses an existing SKU\'s Stripe Product/Price instead of creating new ones', async () => {
+  const stripe = fakeStripe();
+  const upsert = fakeUpsert();
+  const existingRecord = {
+    variants: [
+      { sku: 'APQ-5989067S6A1', priceCents: 4500, stripeProductId: 'prod_existing_s', stripePriceId: 'price_existing_s' },
+    ],
+  };
+  const getProduct = fakeGetProduct(existingRecord);
+
+  const payload = {
+    ApliiqProductIds: [5989067],
+    product: {
+      ...REAL_PAYLOAD.product,
+      variants: [REAL_PAYLOAD.product.variants[0]], // s, price 45.00 — unchanged
+    },
+  };
+
+  const result = await handleAddProduct(payload, { stripe, upsert, getProduct });
+
+  assert.equal(result.hasError, false);
+  assert.equal(getProduct.calls[0], 'apliiq-5989067');
+  // No new Stripe Product or Price minted — the existing pair was reused.
+  assert.equal(stripe.calls.products.length, 0);
+  assert.equal(stripe.calls.prices.length, 0);
+  assert.equal(stripe.calls.priceUpdates.length, 0);
+
+  const patch = upsert.calls[0].patch;
+  assert.equal(patch.variants[0].stripeProductId, 'prod_existing_s');
+  assert.equal(patch.variants[0].stripePriceId, 'price_existing_s');
+});
+
+test('an existing SKU with a changed price gets a new Price on the same Product, and the old Price is archived', async () => {
+  const stripe = fakeStripe();
+  const upsert = fakeUpsert();
+  const existingRecord = {
+    variants: [
+      { sku: 'APQ-5989067S6A1', priceCents: 4000, stripeProductId: 'prod_existing_s', stripePriceId: 'price_existing_s' },
+    ],
+  };
+  const getProduct = fakeGetProduct(existingRecord);
+
+  const payload = {
+    ApliiqProductIds: [5989067],
+    product: {
+      ...REAL_PAYLOAD.product,
+      variants: [REAL_PAYLOAD.product.variants[0]], // s, price 45.00 — differs from the stored 40.00
+    },
+  };
+
+  const result = await handleAddProduct(payload, { stripe, upsert, getProduct });
+
+  assert.equal(result.hasError, false);
+  // No new Stripe Product — the Product is reused.
+  assert.equal(stripe.calls.products.length, 0);
+  // A new Price was created under the existing Product, and the old one archived.
+  assert.equal(stripe.calls.prices.length, 1);
+  assert.equal(stripe.calls.prices[0].product, 'prod_existing_s');
+  assert.equal(stripe.calls.prices[0].unit_amount, 4500);
+  assert.equal(stripe.calls.priceUpdates.length, 1);
+  assert.equal(stripe.calls.priceUpdates[0].id, 'price_existing_s');
+  assert.equal(stripe.calls.priceUpdates[0].args.active, false);
+
+  const patch = upsert.calls[0].patch;
+  assert.equal(patch.variants[0].stripeProductId, 'prod_existing_s');
+  assert.equal(patch.variants[0].stripePriceId, 'price_1');
+});
+
+test('a brand-new SKU on an already-known product still creates fresh Stripe objects for just that SKU', async () => {
+  const stripe = fakeStripe();
+  const upsert = fakeUpsert();
+  const existingRecord = {
+    variants: [
+      { sku: 'APQ-5989067S6A1', priceCents: 4500, stripeProductId: 'prod_existing_s', stripePriceId: 'price_existing_s' },
+    ],
+  };
+  const getProduct = fakeGetProduct(existingRecord);
+
+  const payload = {
+    ApliiqProductIds: [5989067],
+    product: {
+      ...REAL_PAYLOAD.product,
+      // s (already known) + m (new to this catalog entry)
+      variants: [REAL_PAYLOAD.product.variants[0], REAL_PAYLOAD.product.variants[1]],
+    },
+  };
+
+  const result = await handleAddProduct(payload, { stripe, upsert, getProduct });
+
+  assert.equal(result.hasError, false);
+  assert.equal(stripe.calls.products.length, 1); // only the new SKU (m)
+  assert.equal(stripe.calls.prices.length, 1);
+
+  const patch = upsert.calls[0].patch;
+  const [sVariant, mVariant] = patch.variants;
+  assert.equal(sVariant.stripeProductId, 'prod_existing_s');
+  assert.equal(sVariant.stripePriceId, 'price_existing_s');
+  assert.equal(mVariant.stripeProductId, 'prod_1');
+  assert.equal(mVariant.stripePriceId, 'price_1');
 });
