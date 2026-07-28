@@ -1,0 +1,40 @@
+{
+  "ApliiqProductIds": [5989067],
+  "product": {
+    "type": "tshirts",
+    "name": "Better Left Unsaid 2 Tee Mali V",
+    "currency": "USD",
+    "description": "",
+    "imageUrls": [
+      "https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg",
+      "https://blob.apliiq.com/sitestorage/resized-products/5989067_7120_590_900.jpg",
+      "https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg",
+      "https://blob.apliiq.com/sitestorage/resized-products/5989067_7120_590_900.jpg",
+      "https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg",
+      "https://blob.apliiq.com/sitestorage/resized-products/5989067_7120_590_900.jpg",
+      "https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg",
+      "https://blob.apliiq.com/sitestorage/resized-products/5989067_7120_590_900.jpg",
+      "https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg",
+      "https://blob.apliiq.com/sitestorage/resized-products/5989067_7120_590_900.jpg",
+      "https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg",
+      "https://blob.apliiq.com/sitestorage/resized-products/5989067_7120_590_900.jpg",
+      "https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg",
+      "https://blob.apliiq.com/sitestorage/resized-products/5989067_7120_590_900.jpg",
+      "https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg",
+      "https://blob.apliiq.com/sitestorage/resized-products/5989067_7120_590_900.jpg"
+    ],
+    "replaceProduct": false,
+    "sizes": ["s", "m", "l", "xl", "xxl", "xxxl", "4xl", "5xl"],
+    "colors": ["black"],
+    "variants": [
+      { "sku": "APQ-5989067S6A1", "price": 45.0, "color": "black", "size": "s", "imageUrl": "https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg", "weight": 7.0, "weightUnit": "oz", "default": true, "width": 7.0, "height": 1.0, "length": 10.0, "dimensionUnit": "in" },
+      { "sku": "APQ-5989067S7A1", "price": 45.0, "color": "black", "size": "m", "imageUrl": "https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg", "weight": 7.9, "weightUnit": "oz", "default": false, "width": 7.0, "height": 1.0, "length": 10.0, "dimensionUnit": "in" },
+      { "sku": "APQ-5989067S8A1", "price": 45.0, "color": "black", "size": "l", "imageUrl": "https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg", "weight": 7.9, "weightUnit": "oz", "default": false, "width": 7.0, "height": 1.0, "length": 10.0, "dimensionUnit": "in" },
+      { "sku": "APQ-5989067S1A1", "price": 45.0, "color": "black", "size": "xl", "imageUrl": "https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg", "weight": 7.9, "weightUnit": "oz", "default": false, "width": 7.0, "height": 1.0, "length": 10.0, "dimensionUnit": "in" },
+      { "sku": "APQ-5989067S2A1", "price": 47.5, "color": "black", "size": "xxl", "imageUrl": "https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg", "weight": 11.0, "weightUnit": "oz", "default": false, "width": 7.0, "height": 1.0, "length": 10.0, "dimensionUnit": "in" },
+      { "sku": "APQ-5989067S21A1", "price": 49.5, "color": "black", "size": "xxxl", "imageUrl": "https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg", "weight": 11.9, "weightUnit": "oz", "default": false, "width": 7.0, "height": 1.0, "length": 10.0, "dimensionUnit": "in" },
+      { "sku": "APQ-5989067S61A1", "price": 51.5, "color": "black", "size": "4xl", "imageUrl": "https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg", "weight": 15.9, "weightUnit": "oz", "default": false, "width": 7.0, "height": 1.0, "length": 10.0, "dimensionUnit": "in" },
+      { "sku": "APQ-5989067S62A1", "price": 53.5, "color": "black", "size": "5xl", "imageUrl": "https://blob.apliiq.com/sitestorage/resized-products/5989067_7119_590_900.jpg", "weight": 15.9, "weightUnit": "oz", "default": false, "width": 7.0, "height": 1.0, "length": 10.0, "dimensionUnit": "in" }
+    ]
+  }
+}
