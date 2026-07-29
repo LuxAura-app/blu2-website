@@ -163,7 +163,7 @@ footer a:hover { color: var(--off-white); }
 
   <div class="policy-section">
     <div class="policy-section-title">Production time</div>
-    <p id="production-time-note">Every piece is made to order — please allow 5-7 business days for production before your item ships. This is a conservative estimate and may be adjusted as we get real-world data from fulfillment.</p>
+    <p id="production-time-note">Made to order — ships within 1 week. Standard shipping typically takes an additional 2-7 business days to arrive, for a total of about 1-2 weeks.</p>
   </div>
 
   <div class="policy-section">
@@ -189,9 +189,8 @@ footer a:hover { color: var(--off-white); }
     const res = await fetch("/api/shop-config");
     if (!res.ok) throw new Error("bad response");
     const data = await res.json();
-    if (data.productionTimeDays) {
-      document.getElementById("production-time-note").textContent =
-        `Every piece is made to order — please allow ${data.productionTimeDays} for production before your item ships. This is a conservative estimate and may be adjusted as we get real-world data from fulfillment.`;
+    if (data.productionTimeCopy) {
+      document.getElementById("production-time-note").textContent = data.productionTimeCopy;
     }
     if (data.supportEmail) {
       document.getElementById("policy-contact-link").href = `mailto:${data.supportEmail}`;

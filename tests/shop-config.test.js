@@ -48,20 +48,23 @@ test('rejects non-GET requests', async () => {
   assert.equal(res.headers.Allow, 'GET');
 });
 
-test('falls back to a conservative default when PRODUCTION_TIME_DAYS is unset', async () => {
-  await withEnv({ PRODUCTION_TIME_DAYS: undefined }, async () => {
+test('falls back to a conservative default when PRODUCTION_TIME_COPY is unset', async () => {
+  await withEnv({ PRODUCTION_TIME_COPY: undefined }, async () => {
     const res = fakeRes();
     await handler({ method: 'GET' }, res);
     assert.equal(res.statusCode, 200);
-    assert.equal(res.body.productionTimeDays, '5-7 business days');
+    assert.equal(
+      res.body.productionTimeCopy,
+      'Made to order — ships within 1 week. Standard shipping typically takes an additional 2-7 business days to arrive, for a total of about 1-2 weeks.'
+    );
   });
 });
 
-test('uses PRODUCTION_TIME_DAYS when set', async () => {
-  await withEnv({ PRODUCTION_TIME_DAYS: '2-3 business days' }, async () => {
+test('uses PRODUCTION_TIME_COPY when set', async () => {
+  await withEnv({ PRODUCTION_TIME_COPY: 'Made to order — ships in 2-3 business days.' }, async () => {
     const res = fakeRes();
     await handler({ method: 'GET' }, res);
-    assert.equal(res.body.productionTimeDays, '2-3 business days');
+    assert.equal(res.body.productionTimeCopy, 'Made to order — ships in 2-3 business days.');
   });
 });
 

@@ -356,6 +356,7 @@ nav {
 .card-production-note {
   font-size: 11px;
   color: var(--muted);
+  line-height: 1.6;
   margin-top: 10px;
 }
 .card-policy-link {
@@ -718,7 +719,7 @@ footer a:hover { color: var(--off-white); }
   <div class="shop-policy-col">
     <div class="shop-policy-title">Shipping</div>
     <p>Flat $5 shipping, calculated at checkout. Ships within the US only for now.</p>
-    <p id="production-time-note">Made to order — ships in 5-7 business days.</p>
+    <p id="production-time-note">Made to order — ships within 1 week. Standard shipping typically takes an additional 2-7 business days to arrive, for a total of about 1-2 weeks.</p>
   </div>
   <div class="shop-policy-col">
     <div class="shop-policy-title">Returns</div>
@@ -837,7 +838,11 @@ async function loadProducts() {
 /* Env-driven display copy (production time, support contact) — see
    api/shop-config.js. Defaults here match that endpoint's own fallback,
    so the page still shows a sensible value even if this fetch fails. */
-let SHOP_CONFIG = { productionTimeDays: "5-7 business days", supportEmail: null };
+let SHOP_CONFIG = {
+  productionTimeCopy:
+    "Made to order — ships within 1 week. Standard shipping typically takes an additional 2-7 business days to arrive, for a total of about 1-2 weeks.",
+  supportEmail: null,
+};
 
 async function loadShopConfig() {
   try {
@@ -845,7 +850,7 @@ async function loadShopConfig() {
     if (!res.ok) throw new Error("bad response");
     const data = await res.json();
     if (data && typeof data === "object") {
-      if (data.productionTimeDays) SHOP_CONFIG.productionTimeDays = data.productionTimeDays;
+      if (data.productionTimeCopy) SHOP_CONFIG.productionTimeCopy = data.productionTimeCopy;
       if (data.supportEmail) SHOP_CONFIG.supportEmail = data.supportEmail;
     }
   } catch (e) {
@@ -976,7 +981,7 @@ function buildProductCard(group, index) {
           <span class="product-price">${priceLabel}</span>
           <button class="product-buy" type="button">Add to Cart</button>
         </div>
-        <div class="card-production-note">Made to order — ships in ${SHOP_CONFIG.productionTimeDays}.</div>
+        <div class="card-production-note">${SHOP_CONFIG.productionTimeCopy}</div>
         <a class="card-policy-link" href="shipping-returns.html">Shipping &amp; Returns →</a>
         ${hasDetails ? `
         <button type="button" class="details-toggle" aria-expanded="false">Details +</button>
@@ -1224,7 +1229,7 @@ function showCheckoutBanner() {
   await Promise.all([loadProducts(), loadShopConfig()]);
 
   const productionNote = document.getElementById("production-time-note");
-  if (productionNote) productionNote.textContent = `Made to order — ships in ${SHOP_CONFIG.productionTimeDays}.`;
+  if (productionNote) productionNote.textContent = SHOP_CONFIG.productionTimeCopy;
 
   const footerContact = document.getElementById("footer-contact-link");
   if (footerContact && SHOP_CONFIG.supportEmail) footerContact.href = `mailto:${SHOP_CONFIG.supportEmail}`;

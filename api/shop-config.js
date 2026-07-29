@@ -11,12 +11,15 @@ module.exports = async (req, res) => {
   }
 
   res.status(200).json({
-    // Apliiq's own stated average is ~1 week; "5-7 business days" is a
-    // conservative placeholder default, not a confirmed SLA — set
-    // PRODUCTION_TIME_DAYS once real fulfillment timing data comes in
-    // from actual orders and adjust this default (or just always set the
-    // env var) accordingly.
-    productionTimeDays: process.env.PRODUCTION_TIME_DAYS || '5-7 business days',
+    // Full sentence(s), not just a day-range fragment, so wording/structure
+    // can change without a code change — just update the env var. Apliiq's
+    // own stated production average is ~1 week; the "2-7 business days"
+    // transit estimate is a reasonable guess, not from official carrier/
+    // Apliiq documentation, so tighten both once real orders give actual
+    // observed production + transit times.
+    productionTimeCopy:
+      process.env.PRODUCTION_TIME_COPY ||
+      'Made to order — ships within 1 week. Standard shipping typically takes an additional 2-7 business days to arrive, for a total of about 1-2 weeks.',
     // Falls back to the existing internal order-alert address (see
     // lib/alert.js) so this works with zero extra config — set
     // SUPPORT_EMAIL explicitly once a dedicated public-facing support
