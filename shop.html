@@ -66,7 +66,8 @@ nav {
   isolation: isolate;
 }
 .nav-logo { cursor: pointer; display: flex; align-items: center; }
-.nav-right { display: flex; align-items: center; gap: 36px; }
+.nav-right { display: flex; align-items: center; gap: 22px; }
+.nav-links { display: flex; align-items: center; gap: 36px; }
 .nav-right a, .nav-right button {
   font-size: 11px;
   font-weight: 400;
@@ -92,6 +93,32 @@ nav {
   color: var(--off-white);
 }
 #nav-cart-btn:hover { border-color: var(--orange); color: var(--orange); }
+
+/* Hidden on desktop — collapses .nav-links into a dropdown on narrow
+   screens instead, see the max-width:640px block below. */
+.nav-menu-btn {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  width: 32px;
+  min-height: 44px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.nav-menu-btn span {
+  display: block;
+  width: 20px;
+  height: 1px;
+  background: var(--off-white);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.nav-menu-btn.open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+.nav-menu-btn.open span:nth-child(2) { opacity: 0; }
+.nav-menu-btn.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
 
 /* ── SHOP HERO ── */
 @keyframes fadeUp {
@@ -166,8 +193,6 @@ nav {
   border: 1px solid var(--border);
   transition: border-color 0.2s;
 }
-.product-card-inner:hover { border-color: #262626; }
-
 .product-media {
   position: relative;
   aspect-ratio: 4 / 5;
@@ -184,17 +209,24 @@ nav {
   transition: opacity 0.32s ease, transform 0.32s ease;
 }
 /* Hover-swap preview: front crossfades to back, both scale up slightly.
-   Groups with only one image (no .has-back) just get the hover scale. */
+   Groups with only one image (no .has-back) just get the hover scale.
+   Gated to devices that actually have a hovering pointer (a real mouse) —
+   touch browsers latch :hover on tap with no mouseleave to clear it, which
+   without this guard left mobile cards permanently stuck on the back
+   image after any tap on the card (a size button, Add to Cart, etc). */
 .product-media .media-back {
   opacity: 0;
   z-index: 2;
 }
-.product-card-inner:hover .product-media img,
-.product-card-inner:hover .product-media .placeholder-art {
-  transform: scale(1.03);
+@media (hover: hover) and (pointer: fine) {
+  .product-card-inner:hover { border-color: #262626; }
+  .product-card-inner:hover .product-media img,
+  .product-card-inner:hover .product-media .placeholder-art {
+    transform: scale(1.03);
+  }
+  .product-card-inner:hover .product-media.has-back .media-front { opacity: 0; }
+  .product-card-inner:hover .product-media.has-back .media-back { opacity: 1; }
 }
-.product-card-inner:hover .product-media.has-back .media-front { opacity: 0; }
-.product-card-inner:hover .product-media.has-back .media-back { opacity: 1; }
 .product-media .placeholder-art {
   display: flex;
   align-items: center;
@@ -476,7 +508,30 @@ footer a:hover { color: var(--off-white); }
 /* ── RESPONSIVE ── */
 @media (max-width: 640px) {
   nav { padding: 18px 20px; }
-  .nav-right { gap: 20px; }
+  .nav-right { gap: 14px; }
+  .nav-logo, #nav-cart-btn, .nav-menu-btn { position: relative; z-index: 2; }
+  .nav-menu-btn { display: flex; }
+  .nav-links {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    background: var(--black);
+    border-bottom: 1px solid var(--border);
+    padding: 92px 20px 12px;
+    transform: translateY(-100%);
+    transition: transform 0.25s ease;
+  }
+  .nav-links.open { transform: translateY(0); }
+  .nav-links a {
+    width: 100%;
+    min-height: auto;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-links a:last-child { border-bottom: none; }
   .shop-hero { padding: 120px 20px 50px; }
   .shop-grid-section { padding: 50px 20px 90px; }
   footer { padding: 24px 20px; }
@@ -493,10 +548,15 @@ footer a:hover { color: var(--off-white); }
     <img src="img/afd-logo.png" alt="All Flights Delayed" style="height:56px;width:56px;object-fit:contain;opacity:0.75;"/>
   </a>
   <div class="nav-right">
-    <a href="https://maliv.bandcamp.com/album/blu-2" target="_blank">Buy Mixtape</a>
-    <a id="nav-shop" href="shop.html">Shop</a>
-    <a href="index.html">Review</a>
+    <div class="nav-links" id="nav-links">
+      <a href="https://maliv.bandcamp.com/album/blu-2" target="_blank">Buy Mixtape</a>
+      <a id="nav-shop" href="shop.html">Shop</a>
+      <a href="index.html">Review</a>
+    </div>
     <button id="nav-cart-btn" onclick="openCart()">Cart (<span id="cart-count">0</span>)</button>
+    <button id="nav-menu-btn" class="nav-menu-btn" onclick="toggleNavMenu()" aria-expanded="false" aria-controls="nav-links" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
   </div>
 </nav>
 
@@ -823,6 +883,21 @@ function openCart() {
 function closeCart() {
   document.getElementById("cart-overlay").classList.remove("open");
   document.getElementById("cart-drawer").classList.remove("open");
+}
+
+/* ────────────────────────────────────────────
+   MOBILE NAV MENU
+   Below 640px, .nav-links (Buy Mixtape/Shop/Review) collapses into a
+   dropdown toggled by this hamburger button — the always-visible top bar
+   is just logo + Cart + hamburger, so it fits without overflowing on
+   narrow screens.
+──────────────────────────────────────────── */
+function toggleNavMenu() {
+  const menu = document.getElementById("nav-links");
+  const btn = document.getElementById("nav-menu-btn");
+  const isOpen = menu.classList.toggle("open");
+  btn.classList.toggle("open", isOpen);
+  btn.setAttribute("aria-expanded", String(isOpen));
 }
 
 async function startCheckout() {
