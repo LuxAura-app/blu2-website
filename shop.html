@@ -277,6 +277,33 @@ nav {
 .product-buy:hover { border-color: var(--orange); color: var(--orange); }
 .product-buy:active { transform: scale(0.96); }
 
+.product-sizes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.size-btn {
+  min-width: 40px;
+  height: 36px;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.size-btn:hover { border-color: var(--orange); color: var(--off-white); }
+.size-btn.selected {
+  border-color: var(--orange);
+  color: var(--black);
+  background: var(--orange);
+}
+
 /* ── EMPTY / NOTE STRIP ── */
 .shop-note {
   border-top: 1px solid var(--border);
@@ -533,13 +560,16 @@ footer a:hover { color: var(--off-white); }
 /* ────────────────────────────────────────────
    PRODUCT DATA
    Fetched from /api/products on load (Redis-backed catalog — see
-   docs/shop-architecture.md) instead of hardcoded here. Each entry is
-   already shaped for buildProductCard: id, name, desc, priceCents,
-   priceId, badge, image, placeholderWord, fulfillmentProvider,
-   providerVariantId, active. The endpoint only ever returns active:true
-   entries; a product becomes purchasable by flipping its Redis catalog
-   entry active once it has a real Stripe Price and imagery — see §11 of
-   the fulfillment spec / scripts/validate-products.js.
+   docs/shop-architecture.md) instead of hardcoded here. The endpoint
+   returns one flat entry per variant (id, groupId, baseName, name, desc,
+   priceCents, priceId, badge, image, placeholderWord, size, sizeLabel,
+   isDefaultVariant, fulfillmentProvider, providerVariantId, active) — the
+   cart and checkout still key off each variant's own id/priceId, but
+   groupProducts() below folds same-`groupId` entries into one card with a
+   size picker. The endpoint only ever returns active:true entries; a
+   product becomes purchasable by flipping its Redis catalog entry active
+   once it has a real Stripe Price and imagery — see §11 of the
+   fulfillment spec / scripts/validate-products.js.
 ──────────────────────────────────────────── */
 let PRODUCTS = [];
 
@@ -558,41 +588,105 @@ function formatPrice(cents) {
   return "$" + (cents / 100).toFixed(2);
 }
 
-function buildProductCard(p, index) {
+// Canonical display order for sizes — falls back to array order for
+// anything outside the currently-sold range (see ALLOWED_SIZES in
+// api/apliiq/add-product.js).
+const SIZE_ORDER = ["s", "m", "l", "xl", "xxl", "xxxl", "4xl", "5xl"];
+function sizeRank(size) {
+  const i = SIZE_ORDER.indexOf(size);
+  return i === -1 ? SIZE_ORDER.length : i;
+}
+
+// Folds the flat variant list into one card per groupId. A group with no
+// variant marked isDefaultVariant (true for every catalog entry today,
+// since that Apliiq field isn't persisted yet — see
+// lib/product-catalog.js) defaults to its smallest size.
+function groupProducts(products) {
+  const byGroup = new Map();
+  products.forEach((p) => {
+    const key = p.groupId || p.id;
+    if (!byGroup.has(key)) byGroup.set(key, []);
+    byGroup.get(key).push(p);
+  });
+
+  return Array.from(byGroup.values()).map((variants) => {
+    const sorted = [...variants].sort((a, b) => sizeRank(a.size) - sizeRank(b.size));
+    const first = sorted[0];
+    const prices = sorted.map((v) => v.priceCents);
+    const uniform = prices.every((c) => c === prices[0]);
+    const defaultVariant = sorted.find((v) => v.isDefaultVariant) || sorted[0];
+
+    return {
+      groupId: first.groupId,
+      name: first.baseName || first.name,
+      desc: first.desc,
+      image: first.image,
+      placeholderWord: first.placeholderWord,
+      badge: first.badge,
+      variants: sorted,
+      uniform,
+      minPriceCents: Math.min(...prices),
+      maxPriceCents: Math.max(...prices),
+      defaultVariantId: defaultVariant.id,
+    };
+  });
+}
+
+function buildProductCard(group, index) {
   const card = document.createElement("div");
   card.className = "product-card";
   card.style.transitionDelay = (index * 90) + "ms";
 
+  let selectedId = group.defaultVariantId;
+  const priceLabel = group.uniform
+    ? formatPrice(group.minPriceCents)
+    : `${formatPrice(group.minPriceCents)}–${formatPrice(group.maxPriceCents)}`;
+
+  const sizeButtons = group.variants
+    .map(
+      (v) =>
+        `<button type="button" class="size-btn${v.id === selectedId ? " selected" : ""}" data-size-id="${v.id}">${v.sizeLabel || v.size || "—"}</button>`
+    )
+    .join("");
+
   card.innerHTML = `
     <div class="product-card-inner">
       <div class="product-media">
-        <img src="${p.image}" alt="${p.name}" loading="lazy"
+        <img src="${group.image}" alt="${group.name}" loading="lazy"
              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"/>
         <div class="placeholder-art" style="display:none;">
-          <div class="placeholder-word">${p.placeholderWord}</div>
+          <div class="placeholder-word">${group.placeholderWord}</div>
           <div class="placeholder-mark">BLU2 · 2026</div>
         </div>
-        ${p.badge ? `<div class="product-badge">${p.badge}</div>` : ""}
+        ${group.badge ? `<div class="product-badge">${group.badge}</div>` : ""}
       </div>
       <div class="product-info">
-        <div class="product-name">${p.name}</div>
-        <div class="product-desc">${p.desc}</div>
+        <div class="product-name">${group.name}</div>
+        <div class="product-desc">${group.desc}</div>
+        <div class="product-sizes" role="group" aria-label="Select size">${sizeButtons}</div>
         <div class="product-row">
-          <span class="product-price">${formatPrice(p.priceCents)}</span>
-          <button class="product-buy" type="button" data-add-id="${p.id}">Add to Cart</button>
+          <span class="product-price">${priceLabel}</span>
+          <button class="product-buy" type="button">Add to Cart</button>
         </div>
       </div>
     </div>
   `;
 
-  if (!p.image) {
+  if (!group.image) {
     const img = card.querySelector(".product-media img");
     const ph = card.querySelector(".placeholder-art");
     img.style.display = "none";
     ph.style.display = "flex";
   }
 
-  card.querySelector("[data-add-id]").addEventListener("click", () => addToCart(p.id));
+  card.querySelectorAll("[data-size-id]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      selectedId = btn.getAttribute("data-size-id");
+      card.querySelectorAll("[data-size-id]").forEach((b) => b.classList.toggle("selected", b === btn));
+    });
+  });
+
+  card.querySelector(".product-buy").addEventListener("click", () => addToCart(selectedId));
 
   return card;
 }
@@ -671,9 +765,10 @@ function renderCart() {
       if (!product) return;
       const row = document.createElement("div");
       row.className = "cart-line";
+      const lineName = product.sizeLabel ? `${product.baseName || product.name} — ${product.sizeLabel}` : product.name;
       row.innerHTML = `
         <div class="cart-line-info">
-          <div class="cart-line-name">${product.name}</div>
+          <div class="cart-line-name">${lineName}</div>
           <div class="cart-line-price">${formatPrice(product.priceCents)} each</div>
           <div class="cart-line-qty">
             <button class="cart-qty-btn" data-qty-id="${product.id}" data-delta="-1" aria-label="Decrease quantity">−</button>
@@ -774,12 +869,13 @@ function showCheckoutBanner() {
 
   const grid = document.getElementById("shop-grid");
   const activeProducts = PRODUCTS.filter((p) => p.active);
+  const groups = groupProducts(activeProducts);
   const reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  if (activeProducts.length === 0) {
+  if (groups.length === 0) {
     grid.innerHTML = '<p class="shop-empty">New merch is on the way — check back soon.</p>';
   } else {
-    activeProducts.forEach((p, i) => grid.appendChild(buildProductCard(p, i)));
+    groups.forEach((g, i) => grid.appendChild(buildProductCard(g, i)));
   }
 
   const cards = Array.from(document.querySelectorAll(".product-card"));

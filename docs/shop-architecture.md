@@ -85,15 +85,21 @@ One group failing:
 ## Product catalog and variant flattening
 
 `shop.html` fetches `GET /api/products` instead of hardcoding a `PRODUCTS`
-array. `lib/product-catalog.js`'s `flattenProductToCards` turns each
-catalog record's `variants[]` into **one storefront card per variant** —
-e.g. a tee with 3 colors × 4 sizes renders as 12 cards. This is a
-deliberate choice, not an oversight: the storefront has no size/color
-picker UI, and building one is explicitly out of scope for this pass. If
-that stops being acceptable (too many near-duplicate cards once Apliiq
-pushes larger size/color grids via Add to Store), the fix is a picker
-component in `shop.html` plus a change to `flattenProductToCards` — the
-catalog data itself doesn't need to change shape.
+array. `lib/product-catalog.js`'s `flattenProductToCards` still returns
+**one flat entry per variant** (`api/products.js`'s response shape hasn't
+changed) — each entry keeps its own `id`/`priceId` so the cart and
+checkout stay keyed per-SKU — but every entry now also carries `groupId`
+(the shared `internalProductId`), `size`/`sizeLabel`, `baseName` (the
+product name with no size suffix), and `isDefaultVariant`. `shop.html`
+groups the flat array by `groupId` client-side and renders **one card per
+product** with a size-selector button group; "Add to Cart" adds the
+specific selected variant's `priceId`, not the group. A group's card shows
+a single price when every variant's `priceCents` matches, otherwise a
+range — computed client-side from the flat entries, nothing server-side
+tracks "uniform pricing" as its own field. `isDefaultVariant` mirrors
+Apliiq's per-variant `default: true`, but that field isn't persisted by
+`api/apliiq/add-product.js` today, so it's `false` for every existing
+catalog entry and the picker falls back to the smallest/first size.
 
 ## Known v1 limitations
 
