@@ -185,7 +185,7 @@ nav {
   height: 100%;
   object-fit: cover;
   transform: translateZ(28px) scale(1.1);
-  transition: transform 0.15s ease-out;
+  transition: transform 0.15s ease-out, opacity 0.22s ease;
 }
 .product-media .placeholder-art {
   display: flex;
@@ -226,6 +226,43 @@ nav {
   background: var(--orange);
   padding: 5px 10px;
   transform: translateZ(60px);
+}
+
+.product-thumbs {
+  display: flex;
+  gap: 10px;
+  padding: 14px 24px 0;
+  transform: translateZ(20px);
+}
+.product-thumb-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.product-thumb {
+  width: 48px;
+  height: 60px;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.product-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.product-thumb:hover { border-color: var(--orange); }
+.product-thumb.selected { border-color: var(--orange); border-width: 2px; }
+.product-thumb-label {
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .product-info {
@@ -574,6 +611,21 @@ footer a:hover { color: var(--off-white); }
 ──────────────────────────────────────────── */
 let PRODUCTS = [];
 
+/* Per-product custom image galleries, keyed by groupId (internalProductId).
+   Purely a frontend display layer — overrides the single Apliiq-supplied
+   photo with better imagery for specific products, without touching
+   Apliiq/Redis/Stripe. A groupId with no entry here just falls back to the
+   API's own image as a one-item gallery (see groupProducts()). Add future
+   products here as new keys. */
+const IMAGE_OVERRIDES = {
+  "apliiq-5989067": {
+    images: [
+      { src: "img/products/blu2-tee-front.png", label: "Front" },
+      { src: "img/products/blu2-tee-back.png", label: "Back" },
+    ],
+  },
+};
+
 async function loadProducts() {
   try {
     const res = await fetch("/api/products");
@@ -616,12 +668,16 @@ function groupProducts(products) {
     const prices = sorted.map((v) => v.priceCents);
     const uniform = prices.every((c) => c === prices[0]);
     const defaultVariant = sorted.find((v) => v.isDefaultVariant) || sorted[0];
+    const override = IMAGE_OVERRIDES[first.groupId];
+    const images = override && override.images && override.images.length > 0
+      ? override.images
+      : [{ src: first.image, label: null }];
 
     return {
       groupId: first.groupId,
       name: first.baseName || first.name,
       desc: first.desc,
-      image: first.image,
+      images,
       placeholderWord: first.placeholderWord,
       badge: first.badge,
       variants: sorted,
@@ -650,10 +706,28 @@ function buildProductCard(group, index) {
     )
     .join("");
 
+  const images = group.images;
+  let selectedImageIndex = 0;
+
+  const thumbsHtml =
+    images.length > 1
+      ? `<div class="product-thumbs" role="group" aria-label="Product images">${images
+          .map(
+            (img, i) => `
+        <div class="product-thumb-wrap">
+          <button type="button" class="product-thumb${i === 0 ? " selected" : ""}" data-thumb-index="${i}" aria-label="${img.label ? `View ${img.label}` : `View image ${i + 1}`}">
+            <img src="${img.src}" alt="" loading="lazy"/>
+          </button>
+          ${img.label ? `<div class="product-thumb-label">${img.label}</div>` : ""}
+        </div>`
+          )
+          .join("")}</div>`
+      : "";
+
   card.innerHTML = `
     <div class="product-card-inner">
       <div class="product-media">
-        <img src="${group.image}" alt="${group.name}" loading="lazy"
+        <img src="${images[0].src || ""}" alt="${group.name}" loading="lazy"
              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"/>
         <div class="placeholder-art" style="display:none;">
           <div class="placeholder-word">${group.placeholderWord}</div>
@@ -661,6 +735,7 @@ function buildProductCard(group, index) {
         </div>
         ${group.badge ? `<div class="product-badge">${group.badge}</div>` : ""}
       </div>
+      ${thumbsHtml}
       <div class="product-info">
         <div class="product-name">${group.name}</div>
         <div class="product-desc">${group.desc}</div>
@@ -673,12 +748,38 @@ function buildProductCard(group, index) {
     </div>
   `;
 
-  if (!group.image) {
-    const img = card.querySelector(".product-media img");
-    const ph = card.querySelector(".placeholder-art");
-    img.style.display = "none";
-    ph.style.display = "flex";
+  const mainImg = card.querySelector(".product-media img");
+  const placeholder = card.querySelector(".placeholder-art");
+
+  if (!images[0].src) {
+    mainImg.style.display = "none";
+    placeholder.style.display = "flex";
   }
+
+  // Purely cosmetic — swapping the main image never touches selectedId
+  // (size/variant selection) or which priceId Add to Cart uses.
+  card.querySelectorAll("[data-thumb-index]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const i = Number(btn.getAttribute("data-thumb-index"));
+      if (i === selectedImageIndex) return;
+      selectedImageIndex = i;
+
+      card.querySelectorAll("[data-thumb-index]").forEach((b) => b.classList.toggle("selected", b === btn));
+
+      mainImg.style.opacity = "0";
+      setTimeout(() => {
+        mainImg.style.display = "";
+        placeholder.style.display = "none";
+        mainImg.src = images[i].src || "";
+        mainImg.alt = images[i].label ? `${group.name} — ${images[i].label}` : group.name;
+        if (!images[i].src) {
+          mainImg.style.display = "none";
+          placeholder.style.display = "flex";
+        }
+        mainImg.style.opacity = "1";
+      }, 220);
+    });
+  });
 
   card.querySelectorAll("[data-size-id]").forEach((btn) => {
     btn.addEventListener("click", () => {

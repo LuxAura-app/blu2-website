@@ -101,6 +101,16 @@ Apliiq's per-variant `default: true`, but that field isn't persisted by
 `api/apliiq/add-product.js` today, so it's `false` for every existing
 catalog entry and the picker falls back to the smallest/first size.
 
+## Per-product image overrides are client-side only
+
+`shop.html` also has a small `IMAGE_OVERRIDES` map, keyed by `groupId`,
+that lets specific products render a custom multi-image gallery (with a
+thumbnail row) instead of the single photo `api/products.js` returns. This
+is a pure display-layer concern — the catalog record, Redis, Stripe, and
+Apliiq are untouched; a `groupId` with no entry just falls back to the
+API's own image as a one-image gallery (no thumbnail row shown). Add
+future overrides directly in `shop.html`, not in the catalog data.
+
 ## Known v1 limitations
 
 - **Inventory tracking** (`lib/inventory.js`) is a simple counter
