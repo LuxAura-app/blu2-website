@@ -151,7 +151,6 @@ nav {
 }
 
 .product-card {
-  perspective: 1200px;
   opacity: 0;
   transform: translateY(36px);
   transition: opacity 0.7s ease, transform 0.7s ease;
@@ -165,9 +164,7 @@ nav {
   position: relative;
   background: var(--panel);
   border: 1px solid var(--border);
-  transform-style: preserve-3d;
-  transition: transform 0.15s ease-out, border-color 0.2s;
-  will-change: transform;
+  transition: border-color 0.2s;
 }
 .product-card-inner:hover { border-color: #262626; }
 
@@ -175,7 +172,6 @@ nav {
   position: relative;
   aspect-ratio: 4 / 5;
   overflow: hidden;
-  transform-style: preserve-3d;
 }
 .product-media .placeholder-art,
 .product-media img {
@@ -184,9 +180,21 @@ nav {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transform: translateZ(28px) scale(1.1);
-  transition: transform 0.15s ease-out, opacity 0.22s ease;
+  transform: scale(1);
+  transition: opacity 0.32s ease, transform 0.32s ease;
 }
+/* Hover-swap preview: front crossfades to back, both scale up slightly.
+   Groups with only one image (no .has-back) just get the hover scale. */
+.product-media .media-back {
+  opacity: 0;
+  z-index: 2;
+}
+.product-card-inner:hover .product-media img,
+.product-card-inner:hover .product-media .placeholder-art {
+  transform: scale(1.03);
+}
+.product-card-inner:hover .product-media.has-back .media-front { opacity: 0; }
+.product-card-inner:hover .product-media.has-back .media-back { opacity: 1; }
 .product-media .placeholder-art {
   display: flex;
   align-items: center;
@@ -200,7 +208,6 @@ nav {
   letter-spacing: 0.3em;
   text-transform: uppercase;
   color: var(--muted);
-  transform: translateZ(46px);
 }
 .placeholder-word {
   font-size: 28px;
@@ -208,7 +215,6 @@ nav {
   letter-spacing: -0.01em;
   text-transform: uppercase;
   color: var(--off-white);
-  transform: translateZ(46px);
   text-align: center;
   padding: 0 20px;
   line-height: 1.1;
@@ -225,49 +231,11 @@ nav {
   color: var(--black);
   background: var(--orange);
   padding: 5px 10px;
-  transform: translateZ(60px);
-}
-
-.product-thumbs {
-  display: flex;
-  gap: 10px;
-  padding: 14px 24px 0;
-  transform: translateZ(20px);
-}
-.product-thumb-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-}
-.product-thumb {
-  width: 48px;
-  height: 60px;
-  padding: 0;
-  border: 1px solid var(--border);
-  background: var(--panel);
-  cursor: pointer;
-  overflow: hidden;
-  transition: border-color 0.15s;
-}
-.product-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-.product-thumb:hover { border-color: var(--orange); }
-.product-thumb.selected { border-color: var(--orange); border-width: 2px; }
-.product-thumb-label {
-  font-size: 9px;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--muted);
+  z-index: 3;
 }
 
 .product-info {
   padding: 22px 24px 26px;
-  transform: translateZ(20px);
 }
 .product-name {
   font-size: 15px;
@@ -706,36 +674,27 @@ function buildProductCard(group, index) {
     )
     .join("");
 
+  // Hover-swap preview: front image crossfades to the second image in the
+  // group's gallery/override set (its "back" shot) on hover, and back to
+  // front on mouse-leave — pure CSS (.product-card-inner:hover), no JS
+  // tracking. A group with only one image just gets the hover scale, no
+  // second layer to fade to. This is independent of the size-button
+  // selector below: hovering never changes `selectedId`/the cart's priceId.
   const images = group.images;
-  let selectedImageIndex = 0;
-
-  const thumbsHtml =
-    images.length > 1
-      ? `<div class="product-thumbs" role="group" aria-label="Product images">${images
-          .map(
-            (img, i) => `
-        <div class="product-thumb-wrap">
-          <button type="button" class="product-thumb${i === 0 ? " selected" : ""}" data-thumb-index="${i}" aria-label="${img.label ? `View ${img.label}` : `View image ${i + 1}`}">
-            <img src="${img.src}" alt="" loading="lazy"/>
-          </button>
-          ${img.label ? `<div class="product-thumb-label">${img.label}</div>` : ""}
-        </div>`
-          )
-          .join("")}</div>`
-      : "";
+  const hasBack = images.length > 1;
 
   card.innerHTML = `
     <div class="product-card-inner">
-      <div class="product-media">
-        <img src="${images[0].src || ""}" alt="${group.name}" loading="lazy"
-             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"/>
+      <div class="product-media${hasBack ? " has-back" : ""}">
+        <img class="media-front" src="${images[0].src || ""}" alt="${group.name}" loading="lazy"
+             onerror="this.style.display='none'; this.closest('.product-media').querySelector('.placeholder-art').style.display='flex';"/>
+        ${hasBack ? `<img class="media-back" src="${images[1].src}" alt="${group.name} — ${images[1].label || "alternate view"}" loading="lazy"/>` : ""}
         <div class="placeholder-art" style="display:none;">
           <div class="placeholder-word">${group.placeholderWord}</div>
           <div class="placeholder-mark">BLU2 · 2026</div>
         </div>
         ${group.badge ? `<div class="product-badge">${group.badge}</div>` : ""}
       </div>
-      ${thumbsHtml}
       <div class="product-info">
         <div class="product-name">${group.name}</div>
         <div class="product-desc">${group.desc}</div>
@@ -748,38 +707,12 @@ function buildProductCard(group, index) {
     </div>
   `;
 
-  const mainImg = card.querySelector(".product-media img");
-  const placeholder = card.querySelector(".placeholder-art");
-
   if (!images[0].src) {
+    const mainImg = card.querySelector(".media-front");
+    const placeholder = card.querySelector(".placeholder-art");
     mainImg.style.display = "none";
     placeholder.style.display = "flex";
   }
-
-  // Purely cosmetic — swapping the main image never touches selectedId
-  // (size/variant selection) or which priceId Add to Cart uses.
-  card.querySelectorAll("[data-thumb-index]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const i = Number(btn.getAttribute("data-thumb-index"));
-      if (i === selectedImageIndex) return;
-      selectedImageIndex = i;
-
-      card.querySelectorAll("[data-thumb-index]").forEach((b) => b.classList.toggle("selected", b === btn));
-
-      mainImg.style.opacity = "0";
-      setTimeout(() => {
-        mainImg.style.display = "";
-        placeholder.style.display = "none";
-        mainImg.src = images[i].src || "";
-        mainImg.alt = images[i].label ? `${group.name} — ${images[i].label}` : group.name;
-        if (!images[i].src) {
-          mainImg.style.display = "none";
-          placeholder.style.display = "flex";
-        }
-        mainImg.style.opacity = "1";
-      }, 220);
-    });
-  });
 
   card.querySelectorAll("[data-size-id]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -972,7 +905,6 @@ function showCheckoutBanner() {
   const grid = document.getElementById("shop-grid");
   const activeProducts = PRODUCTS.filter((p) => p.active);
   const groups = groupProducts(activeProducts);
-  const reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   if (groups.length === 0) {
     grid.innerHTML = '<p class="shop-empty">New merch is on the way — check back soon.</p>';
@@ -995,33 +927,6 @@ function showCheckoutBanner() {
     cards.forEach((c) => observer.observe(c));
   } else {
     cards.forEach((c) => c.classList.add("in-view"));
-  }
-
-  /* 3D tilt on hover, following the cursor */
-  if (!reducedMotion) {
-    cards.forEach((card) => {
-      const inner = card.querySelector(".product-card-inner");
-      const maxTilt = 9; // degrees
-
-      card.addEventListener("mousemove", (e) => {
-        const rect = card.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const cx = rect.width / 2;
-        const cy = rect.height / 2;
-        const rotateY = ((x - cx) / cx) * maxTilt;
-        const rotateX = ((cy - y) / cy) * maxTilt;
-        inner.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.015)`;
-      });
-
-      card.addEventListener("mouseleave", () => {
-        inner.style.transform = "rotateX(0deg) rotateY(0deg) scale(1)";
-      });
-
-      card.addEventListener("touchstart", () => {
-        inner.style.transform = "rotateX(0deg) rotateY(6deg) scale(1.01)";
-      }, { passive: true });
-    });
   }
 
   renderCart();

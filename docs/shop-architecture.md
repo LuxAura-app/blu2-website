@@ -104,12 +104,16 @@ catalog entry and the picker falls back to the smallest/first size.
 ## Per-product image overrides are client-side only
 
 `shop.html` also has a small `IMAGE_OVERRIDES` map, keyed by `groupId`,
-that lets specific products render a custom multi-image gallery (with a
-thumbnail row) instead of the single photo `api/products.js` returns. This
-is a pure display-layer concern — the catalog record, Redis, Stripe, and
-Apliiq are untouched; a `groupId` with no entry just falls back to the
-API's own image as a one-image gallery (no thumbnail row shown). Add
-future overrides directly in `shop.html`, not in the catalog data.
+that lets specific products supply a front/back image pair instead of the
+single photo `api/products.js` returns. This is a pure display-layer
+concern — the catalog record, Redis, Stripe, and Apliiq are untouched; a
+`groupId` with no entry just falls back to the API's own image as a
+one-image set. On hover, the card crossfades from the front image to the
+back image with a slight scale (pure CSS, `.product-card-inner:hover`, no
+mouse-tracking JS); a one-image group just gets the hover scale, no
+crossfade partner. This is independent of the size-button selector — hover
+never changes which variant/`priceId` Add to Cart uses. Add future
+overrides directly in `shop.html`, not in the catalog data.
 
 ## Known v1 limitations
 
