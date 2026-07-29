@@ -4,7 +4,11 @@
 
 Create one Stripe Product + Price per sellable variant (e.g. "BLU2 Tee —
 Black — M" is its own Product, not a size dropdown inside one Product).
-On each Product, set metadata:
+For Apliiq-sourced products this happens in `scripts/activate-product.js`
+at a single flat price for the whole product, not in
+`api/apliiq/add-product.js` — Add to Store only ever writes the draft
+catalog entry (see `docs/apliiq-webhooks.md`). On each Product, set
+metadata:
 
 - `fulfillment_provider` — `"apliiq"` | `"printful"` | `"self"`
 - `provider_variant_id` — required for `apliiq`/`printful` (the provider's

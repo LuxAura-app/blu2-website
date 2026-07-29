@@ -15,10 +15,28 @@ mapping (fixtures, no live calls), the inbound `x-apliiq-hmac` verification
 (`tests/apliiq-hmac.test.js` — valid/tampered/wrong-secret/missing-header,
 against a fixed payload+secret so the expected hash is a known value),
 Product Search's catalog filtering (`tests/product-search.test.js`), and
-Add to Store's Stripe/Redis writes plus its validation-error path
-(`tests/add-product.test.js`, mocked Stripe and catalog upsert). No test in
+Add to Store's Redis-only writes plus its validation-error path
+(`tests/add-product.test.js`, mocked catalog upsert — Add to Store never
+calls Stripe), and `scripts/activate-product.js`'s flat-price Stripe
+Product/Price creation and re-run idempotency
+(`tests/activate-product.test.js`, mocked Stripe and catalog). No test in
 this suite ever places a live Apliiq order or calls a real API — see the
 Apliiq section below for why that matters.
+
+## Activating an Apliiq product
+
+```bash
+node scripts/activate-product.js apliiq-5989067 --activate --price=45.00
+```
+
+Creates a real Stripe Product + Price for every variant on that catalog
+entry that doesn't already have one, at a single flat `--price` for the
+whole product (no per-variant pricing), then sets the entry `active:
+true`. `--price` is only required the first time — once every variant
+already has a `stripeProductId`, re-running with just `--activate`
+recreates nothing (useful if Apliiq later appends a new size/color: only
+the new SKU gets Stripe objects). Needs `STRIPE_SECRET_KEY` and real Redis
+credentials set.
 
 ## Product activation check
 

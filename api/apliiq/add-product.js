@@ -1,10 +1,9 @@
-const Stripe = require('stripe');
 const { upsertProduct, deriveInternalProductIdFromVariants, getProduct } = require('../../lib/product-catalog');
 
 // Only these sizes are currently sold — Apliiq's full size range for this
 // blank (up to 5xl) isn't offered. Any variant outside this list is
-// dropped before a Stripe Product/Price is ever created for it, so
-// oversized sizes can never end up live in Stripe or the catalog.
+// dropped before it's ever written to the catalog, so oversized sizes
+// can never end up live in Stripe or the catalog.
 const ALLOWED_SIZES = ['s', 'm', 'l', 'xl', 'xxl'];
 
 function isAllowedSize(size) {
@@ -14,9 +13,9 @@ function isAllowedSize(size) {
 /**
  * Apliiq's docs don't document any authentication for Add to Store either
  * (same gap as Product Search) — the compensating control is that nothing
- * created here is ever purchasable: every entry is written `active: false`
- * and a human has to review pricing/imagery and flip it active (§11 of the
- * fulfillment spec). See docs/apliiq-webhooks.md.
+ * created here is ever purchasable: no Stripe Product/Price exists for a
+ * variant until a human runs `scripts/activate-product.js` with a real,
+ * reviewed price (§11 of the fulfillment spec). See docs/apliiq-webhooks.md.
  *
  * Confirmed against a real captured payload (not just Apliiq's published
  * docs example, which doesn't match): the request body nests everything
@@ -48,33 +47,22 @@ function validatePayload(body) {
 }
 
 /**
- * One Stripe Product + Price per variant, matching this build's existing
- * "one sellable SKU = one Stripe Price" convention (docs/stripe-setup.md).
- * The payload's `price` is Apliiq's cost/suggested price, used only as a
- * starting `unit_amount` — never presented to customers without review,
- * since the catalog entry stays `active: false` until a human flips it.
+ * Add to Store no longer touches Stripe at all — it just records what
+ * Apliiq sent. No stripeProductId/stripePriceId exists on a variant until
+ * a human runs `scripts/activate-product.js` with a real, reviewed price
+ * (see its header comment). `variant.price` is Apliiq's own submitted
+ * price — stored as `suggestedCostPrice` purely as a reference for
+ * whoever picks the activation price; it's never charged to a customer.
+ *
+ * Spreading `existingVariant` first means a repeated Add to Store call for
+ * a SKU that's already on the catalog entry (Apliiq re-send, or a manual
+ * re-trigger) refreshes informational fields (images, weight, cost price)
+ * in place without disturbing anything activation may have already set
+ * (`stripeProductId`, `stripePriceId`, `active`).
  */
-async function createStripeVariant(stripe, product, variant) {
-  const label = [variant.color, variant.size].filter(Boolean).join(' / ');
-  const stripeProduct = await stripe.products.create({
-    name: label ? `${product.name} — ${label}` : product.name,
-    metadata: {
-      fulfillment_provider: 'apliiq',
-      provider_variant_id: variant.sku,
-    },
-  });
-
-  const unitAmount = Math.round((Number(variant.price) || 0) * 100);
-  const stripePrice = await stripe.prices.create({
-    product: stripeProduct.id,
-    // Real payloads include an uppercase product-level `currency` (e.g.
-    // "USD") — Stripe requires lowercase, so this normalizes rather than
-    // hardcoding 'usd', while still defaulting to it if currency is absent.
-    currency: (product.currency || 'usd').toLowerCase(),
-    unit_amount: unitAmount,
-  });
-
+function buildVariantRecord(variant, existingVariant) {
   return {
+    ...existingVariant,
     sku: variant.sku,
     color: variant.color || null,
     size: variant.size || null,
@@ -84,62 +72,17 @@ async function createStripeVariant(stripe, product, variant) {
     // not just a shared product-level imageUrls list — used preferentially
     // for that variant's storefront card, see flattenProductToCards.
     imageUrl: variant.imageUrl || null,
-    priceCents: unitAmount,
-    stripeProductId: stripeProduct.id,
-    stripePriceId: stripePrice.id,
-  };
-}
-
-/**
- * Idempotency guard: a repeated Add to Store call for a SKU that's already
- * on the catalog entry (whether Apliiq re-sends, or someone re-triggers it
- * manually) must not mint a second Stripe Product/Price pair. The Product
- * is reused as-is; a Price is only (re)created when the incoming amount
- * actually differs, since Stripe Prices are immutable — the old one is
- * archived so it stops showing as a second active price on the Product.
- */
-async function reuseOrCreateStripeVariant(stripe, product, variant, existingVariant) {
-  if (!existingVariant || !existingVariant.stripeProductId) {
-    return createStripeVariant(stripe, product, variant);
-  }
-
-  const unitAmount = Math.round((Number(variant.price) || 0) * 100);
-  let stripePriceId = existingVariant.stripePriceId;
-
-  if (!stripePriceId || existingVariant.priceCents !== unitAmount) {
-    const stripePrice = await stripe.prices.create({
-      product: existingVariant.stripeProductId,
-      currency: (product.currency || 'usd').toLowerCase(),
-      unit_amount: unitAmount,
-    });
-    if (stripePriceId) {
-      await stripe.prices.update(stripePriceId, { active: false });
-    }
-    stripePriceId = stripePrice.id;
-  }
-
-  return {
-    sku: variant.sku,
-    color: variant.color || null,
-    size: variant.size || null,
-    weight: variant.weight || null,
-    weightUnit: variant.weightUnit || null,
-    imageUrl: variant.imageUrl || null,
-    priceCents: unitAmount,
-    stripeProductId: existingVariant.stripeProductId,
-    stripePriceId,
+    suggestedCostPrice: Number(variant.price) || 0,
   };
 }
 
 /**
  * @param {Object} body the raw Add to Store payload — { ApliiqProductIds, product }
  * @param {Object} [deps] injectable for tests
- * @param {import('stripe')} [deps.stripe]
  * @param {typeof upsertProduct} [deps.upsert]
  * @param {typeof getProduct} [deps.getProduct]
  */
 async function handleAddProduct(body, deps = {}) {
-  const stripe = deps.stripe || new Stripe(process.env.STRIPE_SECRET_KEY);
   const upsert = deps.upsert || upsertProduct;
   const lookupProduct = deps.getProduct || getProduct;
 
@@ -177,28 +120,14 @@ async function handleAddProduct(body, deps = {}) {
     };
   }
 
-  let variantsWithStripe;
-  try {
-    // Look up any existing catalog entry for this product so a repeated
-    // Add to Store call (Apliiq retry or a manual re-trigger) reuses each
-    // SKU's existing Stripe Product/Price instead of minting a duplicate
-    // set — see docs/apliiq-webhooks.md.
-    const existingProduct = await lookupProduct(internalProductId);
-    const existingVariantsBySku = new Map((existingProduct?.variants || []).map((v) => [v.sku, v]));
+  // Look up any existing catalog entry for this product so a repeated Add
+  // to Store call (Apliiq retry, or Apliiq pushing an image/weight update)
+  // updates each known SKU's record in place — by SKU only, nothing to
+  // look up in Stripe at this stage — and only appends genuinely new SKUs.
+  const existingProduct = await lookupProduct(internalProductId);
+  const existingVariantsBySku = new Map((existingProduct?.variants || []).map((v) => [v.sku, v]));
 
-    variantsWithStripe = [];
-    for (const variant of allowedVariants) {
-      variantsWithStripe.push(
-        await reuseOrCreateStripeVariant(stripe, product, variant, existingVariantsBySku.get(variant.sku))
-      );
-    }
-  } catch (err) {
-    return {
-      storeProductId: null,
-      hasError: true,
-      errorMessages: [`Stripe product/price creation failed: ${err.message}`],
-    };
-  }
+  const variants = allowedVariants.map((variant) => buildVariantRecord(variant, existingVariantsBySku.get(variant.sku)));
 
   await upsert(internalProductId, {
     apliiqProductId: apliiqProductId != null ? String(apliiqProductId) : null,
@@ -210,15 +139,19 @@ async function handleAddProduct(body, deps = {}) {
     imageUrls: product.imageUrls || [],
     sizes: product.sizes || [],
     colors: product.colors || [],
-    variants: variantsWithStripe,
+    variants,
     provider: 'apliiq',
     source: 'apliiq-add-to-store',
-    active: false,
+    // Omitted deliberately, not hardcoded `false`: upsertProduct() only
+    // defaults `active` to false on first creation and otherwise leaves it
+    // alone, so a re-send that updates images/weight after a human has
+    // activated this product (scripts/activate-product.js) can't silently
+    // flip it back to a draft.
   });
 
   console.log(
     `[apliiq/add-product] upserted ${internalProductId} — "${product.name}" ` +
-      `(${variantsWithStripe.length} variant${variantsWithStripe.length === 1 ? '' : 's'})`
+      `(${variants.length} variant${variants.length === 1 ? '' : 's'})`
   );
 
   return { storeProductId: internalProductId, hasError: false, errorMessages: [] };

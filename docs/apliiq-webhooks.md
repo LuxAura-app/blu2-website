@@ -145,40 +145,55 @@ payload had 8 variants, one per size, and 16 duplicated image URLs at the
 product level; see the full fixture in `tests/add-product.test.js`.)
 
 Everything product-shaped is nested under `product`; there is no
-`store_ProductId` field anywhere in the real payload. For each variant in
-`product.variants`, creates one Stripe Product + Price (metadata
-`fulfillment_provider: apliiq`, `provider_variant_id: sku`; the payload's
-`price` is used only as the Price's starting `unit_amount` — Apliiq's
-cost/suggested price, not necessarily retail; `currency` is normalized to
-lowercase for Stripe, since the real payload sends `"USD"`). Writes/updates
-the Redis catalog entry via `upsertProduct`, always `active: false` —
-including, per variant, its own `imageUrl` (used preferentially over the
-product-level `imageUrls` list when rendering storefront cards, since real
-payloads give each size its own image rather than sharing one) and
-`weightUnit` alongside the existing `weight` field. `type` (Apliiq's
-garment-type label, e.g. `"tshirts"`) is stored but not currently used by
-anything. Responds:
+`store_ProductId` field anywhere in the real payload. Add to Store no
+longer touches Stripe at all — it only writes/updates the Redis catalog
+entry via `upsertProduct` (never resetting `active` back to `false` on a
+re-send; see below). For each variant in `product.variants` it stores
+`sku`, `color`, `size`, `weight`, `weightUnit`, `imageUrl` (used
+preferentially over the product-level `imageUrls` list when rendering
+storefront cards, since real payloads give each size its own image rather
+than sharing one), and the payload's `price` renamed to
+`suggestedCostPrice` — Apliiq's own cost/suggested price, kept purely as a
+reference for whoever picks the real activation price; it's never charged
+to a customer. `type` (Apliiq's garment-type label, e.g. `"tshirts"`) is
+stored but not currently used by anything. No `stripeProductId` /
+`stripePriceId` exists on a variant at this stage — those only appear once
+a human runs `node scripts/activate-product.js <id> --activate --price=<dollars>`
+(see its header comment), which creates one real Stripe Product + Price
+per variant at a single flat price and flips the entry `active: true`.
+Responds:
 
 ```json
 { "storeProductId": "your-internal-product-id", "hasError": false, "errorMessages": [] }
 ```
 
-or, on a validation/Stripe failure, `hasError: true` with human-readable
-strings in `errorMessages` — this route never throws an unhandled 500,
-since Apliiq's UI surfaces whatever is sent back.
+or, on a validation failure, `hasError: true` with human-readable strings
+in `errorMessages` — this route never throws an unhandled 500, since
+Apliiq's UI surfaces whatever is sent back.
 
 ### Size restriction — `ALLOWED_SIZES`
 
 This blank isn't sold above `xxl`. `ALLOWED_SIZES = ['s', 'm', 'l', 'xl', 'xxl']`
 in `api/apliiq/add-product.js` filters `product.variants` by
-`variant.size` (case-insensitive) *before* any Stripe Product/Price is
-created, so an oversized size (`xxxl`, `4xl`, `5xl`, ...) can never end up
+`variant.size` (case-insensitive) *before* anything is written to the
+catalog, so an oversized size (`xxxl`, `4xl`, `5xl`, ...) can never end up
 live in Stripe or the catalog — not "created then hidden," never created
 at all. If every variant in a payload falls outside the allowed range, the
 whole request returns `hasError: true` rather than upserting an
 empty-variants catalog entry. This is a deliberate business rule (assortment
 limited to s–xxl for this item), not an Apliiq quirk — adjust the array if
 the allowed range changes.
+
+### Idempotency — matched by SKU only, no Stripe lookup
+
+A repeated Add to Store call (Apliiq retry, or Apliiq pushing an
+image/weight update) is matched purely against the existing catalog
+entry's `variants[]` by `sku` — there's nothing in Stripe to look up yet.
+A known SKU has its informational fields (images, weight, cost price)
+refreshed in place; a genuinely new SKU is appended. Anything activation
+may have already set on a variant (`stripeProductId`, `stripePriceId`) is
+preserved untouched, since `buildVariantRecord` spreads the existing
+record first — see `api/apliiq/add-product.js`.
 
 ### Resolved — the dedup key is `ApliiqProductIds[0]`, not `store_ProductId`
 
