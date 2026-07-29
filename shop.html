@@ -380,6 +380,32 @@ nav {
   background: var(--orange);
 }
 
+/* ── SHIPPING / RETURNS ── */
+.shop-policy {
+  border-top: 1px solid var(--border);
+  padding: 40px;
+  max-width: 1280px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 32px;
+}
+.shop-policy-title {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--orange);
+  margin-bottom: 10px;
+}
+.shop-policy p {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+  letter-spacing: 0.02em;
+}
+.shop-policy a { color: var(--muted); text-decoration: underline; }
+.shop-policy a:hover { color: var(--off-white); }
+
 /* ── CART DRAWER ── */
 .cart-overlay {
   position: fixed;
@@ -486,6 +512,11 @@ nav {
   margin-bottom: 18px;
   color: var(--off-white);
 }
+.cart-shipping-note {
+  font-size: 11px;
+  color: var(--muted);
+  margin: -10px 0 18px;
+}
 .cart-checkout-btn {
   width: 100%;
   padding: 16px;
@@ -573,7 +604,9 @@ footer a:hover { color: var(--off-white); }
   .nav-links a:last-child { border-bottom: none; }
   .shop-hero { padding: 120px 20px 50px; }
   .shop-grid-section { padding: 50px 20px 90px; }
-  footer { padding: 24px 20px; }
+  .shop-policy { padding: 30px 20px; }
+  footer { padding: 24px 20px; flex-direction: column; justify-content: center; text-align: center; }
+  .social-links { justify-content: center; }
   .checkout-banner { padding: 16px 20px 0; }
   .cart-drawer { width: 100vw; }
 }
@@ -617,6 +650,17 @@ footer a:hover { color: var(--off-white); }
   <div class="shop-grid" id="shop-grid"></div>
 </div>
 
+<div class="shop-policy">
+  <div class="shop-policy-col">
+    <div class="shop-policy-title">Shipping</div>
+    <p>Flat $5 shipping, calculated at checkout. Every piece is made to order, so please allow a few extra days for production before your item ships.</p>
+  </div>
+  <div class="shop-policy-col">
+    <div class="shop-policy-title">Returns</div>
+    <p>Made-to-order apparel is final sale — we can't accept returns for size or preference. If your order arrives damaged, defective, or wrong, message us on Instagram <a href="https://instagram.com/mali__v" target="_blank">@mali__v</a> within 14 days of delivery for a replacement or refund.</p>
+  </div>
+</div>
+
 <footer>
   <p>© 2026 AllFlightsDelayed</p>
   <div class="social-links">
@@ -640,6 +684,7 @@ footer a:hover { color: var(--off-white); }
       <span>Subtotal</span>
       <span id="cart-subtotal">$0.00</span>
     </div>
+    <div class="cart-shipping-note">+ $5.00 flat-rate shipping, added at checkout</div>
     <button class="cart-checkout-btn" id="cart-checkout-btn" onclick="startCheckout()">Checkout</button>
     <div class="cart-status" id="cart-status"></div>
   </div>
