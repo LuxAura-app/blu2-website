@@ -29,6 +29,26 @@ itself against a fake Redis client). No test in this suite ever places a
 live Apliiq order or calls a real API — see the Apliiq section below for
 why that matters.
 
+## Verifying self-fulfilled inventory + the oversold alert, for real
+
+```bash
+node scripts/verify-self-inventory.js
+```
+
+One-off manual script, deliberately **not** picked up by `node --test` —
+named `verify-` rather than `test-` because a literal `test-*.js` name
+matches the test runner's default file discovery and gets auto-executed
+as a real test (confirmed the hard way while building this). Creates a
+throwaway `self`-fulfilled catalog entry + inventory count (starting
+stock 2) under a clearly-marked test product ID/SKU, calls the exact same
+`decrementInventory(item.sku, item.quantity)` api/stripe-webhook.js calls
+per unit purchased — three times, so the third pushes stock negative and
+triggers a real oversold alert email to `ORDER_NOTIFICATION_EMAIL` — then
+deletes both the catalog entry and inventory key in a `finally` block.
+Needs real Redis credentials and `RESEND_API_KEY`/`ORDER_NOTIFICATION_EMAIL`
+set to see the actual alert email; safe to run against production Redis
+either way, since cleanup always runs.
+
 ## Activating an Apliiq product
 
 ```bash
