@@ -1571,6 +1571,14 @@ function exportCSV() {
 
 /* ── INIT ── */
 buildHomeTracklist();
+
+// Lets other pages (e.g. shop.html's nav) deep-link straight into the
+// Rate & Review flow via index.html?screen=review, instead of always
+// landing on home-screen — routes through the same handleVoteNav() logic
+// the on-page nav button uses, so login/voting-open state is respected.
+if (new URLSearchParams(location.search).get("screen") === "review") {
+  handleVoteNav();
+}
 </script>
 </body>
 </html>
