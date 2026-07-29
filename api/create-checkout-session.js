@@ -153,8 +153,14 @@ async function handleCreateCheckoutSession(body, deps = {}) {
       ],
       custom_text: {
         submit: {
+          // Not claiming automated STOP-keyword handling here — no real
+          // SMS/email marketing platform is wired up yet, so a "Reply
+          // STOP" promise would be false. Once one is chosen and actual
+          // STOP-keyword handling / unsubscribe links are built, update
+          // this back to reference those specific mechanisms (matches the
+          // same fix already made in privacy.html's marketing-use bullet).
           message:
-            'Yes, send me occasional updates about new drops and shows (email and text). Msg & data rates may apply. Reply STOP to opt out any time.',
+            'Yes, send me occasional updates about new drops and shows (email and text). Msg & data rates may apply. You can opt out at any time by contacting us at titledtentatively@gmail.com.',
         },
       },
       success_url: `${siteUrl}/shop.html?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
