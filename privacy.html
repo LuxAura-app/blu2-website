@@ -207,7 +207,18 @@ footer a:hover { color: var(--off-white); }
     <ul>
       <li>Your name, email, phone, and shipping address are shared with our fulfillment partner (Apliiq) solely to print and ship your order.</li>
       <li>Your email is used to send order confirmations and updates about your purchase.</li>
-      <li>If you opted in to marketing at checkout, we may email or text you about new drops and shows. You can reply STOP to opt out of texts at any time, and every marketing email includes an unsubscribe link.</li>
+      <!--
+        Deliberately NOT claiming automated STOP-keyword handling or an
+        unsubscribe link — neither exists yet (no real SMS/email marketing
+        platform is wired up). Once one is chosen and actual STOP-keyword
+        handling / unsubscribe links are built, update this bullet (and
+        the similar consent copy in api/create-checkout-session.js's
+        custom_text.submit.message, which still says "Reply STOP" — not
+        touched here since it wasn't asked for and is compliance-sensitive
+        checkout flow copy) to reference those specific mechanisms instead
+        of a manual opt-out via email.
+      -->
+      <li>If you opted in to marketing at checkout, we may email or text you about new drops and shows. You can opt out of marketing messages at any time by contacting us at <a href="mailto:titledtentatively@gmail.com">titledtentatively@gmail.com</a>.</li>
       <li>We keep a record of orders for accounting, customer support, and fraud-prevention purposes.</li>
     </ul>
   </div>
