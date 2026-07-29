@@ -44,8 +44,16 @@ a warning, rather than failing checkout.
   defaults to 2x the flat rate as a placeholder; neither that default nor
   the flat rate itself is a confirmed real cost yet — confirm both with
   Apliiq (or from a real order invoice) before launch.
-- `SHOP_FREE_SHIPPING_THRESHOLD_CENTS` (by subtotal) overrides either tier
-  to $0 ("Free shipping") regardless of weight.
+- `SHOP_FREE_SHIPPING_THRESHOLD_CENTS` (by subtotal) would override either
+  tier to $0 ("Free shipping") regardless of weight — **but only when
+  `SHOP_FREE_SHIPPING_ENABLED=true`**. It's off by default and currently
+  disabled in production: a 3+ item order can be both over the free-
+  shipping subtotal threshold and heavy enough for the Upgraded tier,
+  and until `SHOP_APLIIQ_UPGRADED_SHIPPING_CENTS` reflects a real
+  confirmed rate, shipping that order for free risks an unknown margin
+  loss. Re-enable the flag once that rate is confirmed (Apliiq support or
+  a real order invoice) and the threshold has been recalculated to
+  safely cover it — see docs/shop-architecture.md.
 
 `SHOP_APLIIQ_ADDITIONAL_ITEM_CENTS` (a flat per-extra-item surcharge) was
 removed — the weight tiers already capture "more items costs more to

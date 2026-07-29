@@ -139,3 +139,13 @@ overrides directly in `shop.html`, not in the catalog data.
 - **`findOrderByProviderOrderId` is a linear scan** over `orders:index`
   (`lib/order-log.js`) rather than a dedicated reverse-lookup key — fine at
   storefront volumes, not at scale.
+- **Free shipping is temporarily disabled** (`SHOP_FREE_SHIPPING_ENABLED`,
+  default `false`, gates `SHOP_FREE_SHIPPING_THRESHOLD_CENTS` in
+  `api/create-checkout-session.js`) because `SHOP_APLIIQ_UPGRADED_SHIPPING_CENTS`
+  is still a placeholder (2x the flat rate, not a confirmed real Apliiq
+  cost) — a 3+ item order can be both over the free-shipping subtotal
+  threshold and heavy enough for the Upgraded tier, and shipping that for
+  free risks an unknown margin loss until the real rate is known. Re-enable
+  the flag once the Upgraded Shipping rate is confirmed (Apliiq support or
+  a real order invoice) and the free-shipping threshold has been
+  recalculated to safely cover it — see docs/stripe-setup.md.

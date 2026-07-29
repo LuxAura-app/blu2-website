@@ -98,11 +98,22 @@ async function handleCreateCheckoutSession(body, deps = {}) {
   const upgradedShippingCents = process.env.SHOP_APLIIQ_UPGRADED_SHIPPING_CENTS
     ? Number(process.env.SHOP_APLIIQ_UPGRADED_SHIPPING_CENTS)
     : flatShippingCents * 2;
+  // Temporarily disabled (default false, not just an unreachable
+  // threshold — a flag with this comment is harder to forget the reason
+  // for than a giant number would be): the real Upgraded Shipping rate
+  // isn't confirmed yet, so a 3+ item order that's both heavy enough for
+  // the Upgraded tier AND over the free-shipping subtotal threshold could
+  // currently ship at a loss of unknown size. Re-enable
+  // SHOP_FREE_SHIPPING_ENABLED once SHOP_APLIIQ_UPGRADED_SHIPPING_CENTS
+  // reflects a real, confirmed Apliiq rate and the threshold has been
+  // recalculated to safely cover it — see docs/shop-architecture.md.
+  const freeShippingEnabled = process.env.SHOP_FREE_SHIPPING_ENABLED === 'true';
   const freeShippingThresholdCents = process.env.SHOP_FREE_SHIPPING_THRESHOLD_CENTS
     ? Number(process.env.SHOP_FREE_SHIPPING_THRESHOLD_CENTS)
     : null;
 
-  const qualifiesForFreeShipping = freeShippingThresholdCents != null && subtotalCents >= freeShippingThresholdCents;
+  const qualifiesForFreeShipping =
+    freeShippingEnabled && freeShippingThresholdCents != null && subtotalCents >= freeShippingThresholdCents;
   const isUpgradedTier = totalWeightOz >= UPGRADED_SHIPPING_THRESHOLD_OZ;
   const shippingCents = qualifiesForFreeShipping ? 0 : isUpgradedTier ? upgradedShippingCents : flatShippingCents;
   const shippingLabel = qualifiesForFreeShipping

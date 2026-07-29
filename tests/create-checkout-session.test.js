@@ -43,11 +43,17 @@ function withEnv(vars, fn) {
   });
 }
 
+// Matches the real production default: free shipping is temporarily
+// disabled (SHOP_FREE_SHIPPING_ENABLED unset/false) until the real
+// Upgraded Shipping rate is confirmed — see docs/shop-architecture.md.
 const SHIPPING_ENV = {
   SHOP_APLIIQ_FLAT_SHIPPING_CENTS: '500',
   SHOP_APLIIQ_UPGRADED_SHIPPING_CENTS: undefined,
   SHOP_FREE_SHIPPING_THRESHOLD_CENTS: '10000',
+  SHOP_FREE_SHIPPING_ENABLED: undefined,
 };
+
+const FREE_SHIPPING_ENV = { ...SHIPPING_ENV, SHOP_FREE_SHIPPING_ENABLED: 'true' };
 
 // A single tee variant weighs 7oz per the real captured Apliiq payload
 // (tests/add-product.test.js's REAL_PAYLOAD) — used here as the stand-in
@@ -111,8 +117,8 @@ test('exactly 16oz (the threshold itself) counts as the upgraded tier', async ()
   });
 });
 
-test('the free-shipping threshold overrides the standard tier', async () => {
-  await withEnv(SHIPPING_ENV, async () => {
+test('the free-shipping threshold overrides the standard tier when SHOP_FREE_SHIPPING_ENABLED is true', async () => {
+  await withEnv(FREE_SHIPPING_ENV, async () => {
     const stripe = fakeStripe({ price_s: priceObj(10000) }); // $100 — meets the $100 free-shipping threshold
     const result = await handleCreateCheckoutSession(
       { items: [{ priceId: 'price_s', qty: 1 }] }, // 7oz — would otherwise be standard tier
@@ -126,8 +132,8 @@ test('the free-shipping threshold overrides the standard tier', async () => {
   });
 });
 
-test('the free-shipping threshold overrides the upgraded tier too', async () => {
-  await withEnv(SHIPPING_ENV, async () => {
+test('the free-shipping threshold overrides the upgraded tier too, when enabled', async () => {
+  await withEnv(FREE_SHIPPING_ENV, async () => {
     const stripe = fakeStripe({ price_s: priceObj(10000) });
     const result = await handleCreateCheckoutSession(
       { items: [{ priceId: 'price_s', qty: 3 }] }, // 21oz (upgraded tier by weight) but $300 (over free-shipping threshold)
@@ -138,6 +144,53 @@ test('the free-shipping threshold overrides the upgraded tier too', async () => 
     const shippingOption = stripe.sessionsCreated[0].shipping_options[0].shipping_rate_data;
     assert.equal(shippingOption.fixed_amount.amount, 0);
     assert.equal(shippingOption.display_name, 'Free shipping');
+  });
+});
+
+test('SHOP_FREE_SHIPPING_ENABLED defaults to false — a cart over the free-shipping subtotal threshold is still charged Standard shipping', async () => {
+  await withEnv(SHIPPING_ENV, async () => {
+    const stripe = fakeStripe({ price_s: priceObj(10000) }); // $100 — would meet the threshold, if enabled
+    const result = await handleCreateCheckoutSession(
+      { items: [{ priceId: 'price_s', qty: 1 }] }, // 7oz — standard tier by weight
+      { stripe, buildVariantIndex: fakeVariantIndex(VARIANTS), siteUrl: 'https://example.com' }
+    );
+
+    assert.equal(result.status, 200);
+    const shippingOption = stripe.sessionsCreated[0].shipping_options[0].shipping_rate_data;
+    assert.equal(shippingOption.fixed_amount.amount, 500);
+    assert.equal(shippingOption.display_name, 'Standard shipping');
+  });
+});
+
+test('SHOP_FREE_SHIPPING_ENABLED disabled — a cart over the threshold AND in the upgraded weight tier is still charged Upgraded shipping, not free', async () => {
+  await withEnv(SHIPPING_ENV, async () => {
+    const stripe = fakeStripe({ price_s: priceObj(10000) });
+    const result = await handleCreateCheckoutSession(
+      { items: [{ priceId: 'price_s', qty: 3 }] }, // 21oz (upgraded tier) and $300 (over the free-shipping threshold, if it applied)
+      { stripe, buildVariantIndex: fakeVariantIndex(VARIANTS), siteUrl: 'https://example.com' }
+    );
+
+    assert.equal(result.status, 200);
+    const shippingOption = stripe.sessionsCreated[0].shipping_options[0].shipping_rate_data;
+    // This is exactly the margin-risk scenario the flag exists to prevent —
+    // must charge Upgraded, never silently fall through to free.
+    assert.equal(shippingOption.fixed_amount.amount, 1000);
+    assert.equal(shippingOption.display_name, 'Upgraded shipping');
+  });
+});
+
+test('explicitly setting SHOP_FREE_SHIPPING_ENABLED to a non-"true" value also keeps shipping charged', async () => {
+  await withEnv({ ...SHIPPING_ENV, SHOP_FREE_SHIPPING_ENABLED: 'false' }, async () => {
+    const stripe = fakeStripe({ price_s: priceObj(10000) });
+    const result = await handleCreateCheckoutSession(
+      { items: [{ priceId: 'price_s', qty: 1 }] },
+      { stripe, buildVariantIndex: fakeVariantIndex(VARIANTS), siteUrl: 'https://example.com' }
+    );
+
+    assert.equal(result.status, 200);
+    const shippingOption = stripe.sessionsCreated[0].shipping_options[0].shipping_rate_data;
+    assert.equal(shippingOption.fixed_amount.amount, 500);
+    assert.equal(shippingOption.display_name, 'Standard shipping');
   });
 });
 
