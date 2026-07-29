@@ -380,6 +380,47 @@ nav {
   background: var(--orange);
 }
 
+.details-toggle {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin-top: 16px;
+  padding-top: 14px;
+  border: none;
+  border-top: 1px solid var(--border);
+  background: none;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  min-height: 44px;
+}
+.details-toggle:hover { color: var(--off-white); }
+.product-details {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+  margin-top: -6px;
+}
+.product-details p { margin-bottom: 10px; }
+.product-details p:last-child { margin-bottom: 0; }
+.details-label {
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--off-white);
+  margin-top: 14px !important;
+  margin-bottom: 6px !important;
+}
+.details-features {
+  margin: 8px 0 14px;
+  padding-left: 18px;
+}
+.details-features li { margin-bottom: 6px; }
+
 /* ── SHIPPING / RETURNS ── */
 .shop-policy {
   border-top: 1px solid var(--border);
@@ -722,6 +763,34 @@ const IMAGE_OVERRIDES = {
   },
 };
 
+/* Per-product long-form copy, keyed the same way as IMAGE_OVERRIDES —
+   Apliiq's Add to Store payload for this product sent an empty
+   description, so there's nothing to carry over from the catalog; this
+   is manually-supplied copy layered on top client-side. `shortDesc` is
+   the one-liner shown directly on the card; everything else only shows
+   once the card's "Details" toggle is expanded, so the card itself stays
+   clean. A groupId with no entry here just shows the API's own (possibly
+   empty) `desc` and no Details toggle at all. */
+const PRODUCT_COPY_OVERRIDES = {
+  "apliiq-5989067": {
+    shortDesc: "A single rose, caught mid-burn — the image the whole album is built around.",
+    fullDescription: [
+      "The front carries the mark that defines this era — a single rose, caught mid-burn, stem and thorns still intact beneath the flame. No text, no clutter. Just the image the whole album is built around.",
+      "Flip it, and the story gets loud. MALI V sits up top like a byline, followed by BETTER LEFT UNSAID, each word licked in fire-gradient type — orange bleeding to white-hot at the edges. The 2 anchors it all at the bottom, the flame from the front graphic bleeding straight into the numeral like the fire never stopped burning.",
+      "Printed on a 7.5oz Shaka Wear heavyweight blank — oversized, boxy, built to hold its shape and its color wash after wash. This isn't a shirt with a logo on it. It's the album cover you can wear.",
+    ],
+    features: [
+      "Front: single burning rose graphic, full chest placement",
+      "Back: “MALI V — BETTER LEFT UNSAID 2” in fire-gradient typography",
+      "7.5oz heavyweight, 100% USA cotton, oversized fit with slight drop shoulder",
+      "Reinforced double-needle stitching at neck, sleeves, and hem",
+      "OEKO-TEX certified production",
+    ],
+    fitNote: "Runs true to the oversized fit shown. Want the full boxy silhouette? Order true to size. Prefer something closer to a regular tee? Size down one.",
+    care: "Machine wash cold, inside out. Tumble dry low or hang dry to protect the print.",
+  },
+};
+
 async function loadProducts() {
   try {
     const res = await fetch("/api/products");
@@ -768,11 +837,16 @@ function groupProducts(products) {
     const images = override && override.images && override.images.length > 0
       ? override.images
       : [{ src: first.image, label: null }];
+    const copy = PRODUCT_COPY_OVERRIDES[first.groupId] || {};
 
     return {
       groupId: first.groupId,
       name: first.baseName || first.name,
-      desc: first.desc,
+      desc: copy.shortDesc || first.desc,
+      fullDescription: copy.fullDescription || null,
+      features: copy.features || null,
+      fitNote: copy.fitNote || null,
+      care: copy.care || null,
       images,
       placeholderWord: first.placeholderWord,
       badge: first.badge,
@@ -811,6 +885,17 @@ function buildProductCard(group, index) {
   const images = group.images;
   const hasBack = images.length > 1;
 
+  // Long-form copy (full description/features/fit/care) stays collapsed
+  // behind a "Details" toggle so the card itself stays clean — only
+  // groups with PRODUCT_COPY_OVERRIDES content get the toggle at all.
+  const hasDetails = Boolean(group.fullDescription || group.features || group.fitNote || group.care);
+  const detailsHtml = [
+    (group.fullDescription || []).map((p) => `<p>${p}</p>`).join(""),
+    group.features ? `<ul class="details-features">${group.features.map((f) => `<li>${f}</li>`).join("")}</ul>` : "",
+    group.fitNote ? `<p class="details-label">Fit &amp; Sizing</p><p>${group.fitNote}</p>` : "",
+    group.care ? `<p class="details-label">Care</p><p>${group.care}</p>` : "",
+  ].join("");
+
   card.innerHTML = `
     <div class="product-card-inner">
       <div class="product-media${hasBack ? " has-back" : ""}">
@@ -839,6 +924,9 @@ function buildProductCard(group, index) {
           <span class="product-price">${priceLabel}</span>
           <button class="product-buy" type="button">Add to Cart</button>
         </div>
+        ${hasDetails ? `
+        <button type="button" class="details-toggle" aria-expanded="false">Details +</button>
+        <div class="product-details" hidden>${detailsHtml}</div>` : ""}
       </div>
     </div>
   `;
@@ -875,6 +963,17 @@ function buildProductCard(group, index) {
   });
 
   card.querySelector(".product-buy").addEventListener("click", () => addToCart(selectedId));
+
+  if (hasDetails) {
+    const detailsToggle = card.querySelector(".details-toggle");
+    const detailsPanel = card.querySelector(".product-details");
+    detailsToggle.addEventListener("click", () => {
+      detailsPanel.hidden = !detailsPanel.hidden;
+      const open = !detailsPanel.hidden;
+      detailsToggle.textContent = open ? "Details −" : "Details +";
+      detailsToggle.setAttribute("aria-expanded", String(open));
+    });
+  }
 
   return card;
 }
