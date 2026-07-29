@@ -68,6 +68,11 @@ nav {
 .nav-logo { cursor: pointer; display: flex; align-items: center; }
 .nav-right { display: flex; align-items: center; gap: 22px; }
 .nav-links { display: flex; align-items: center; gap: 36px; }
+/* Home is only useful inside the mobile hamburger dropdown — on desktop
+   the logo already links home, so this stays hidden there (shown again
+   in the max-width:640px block below). Descendant selector (0,2,0) beats
+   ".nav-right a"'s (0,1,1) regardless of source order. */
+.nav-links .nav-home-link { display: none; }
 .nav-right a, .nav-right button {
   font-size: 11px;
   font-weight: 400;
@@ -95,8 +100,11 @@ nav {
 #nav-cart-btn:hover { border-color: var(--orange); color: var(--orange); }
 
 /* Hidden on desktop — collapses .nav-links into a dropdown on narrow
-   screens instead, see the max-width:640px block below. */
-.nav-menu-btn {
+   screens instead, see the max-width:640px block below. Selector is the
+   id (not .nav-menu-btn) so this display:none reliably beats the higher-
+   specificity ".nav-right button" rule above (0,1,1 vs 0,1,0) instead of
+   losing to it and showing the hamburger on desktop too. */
+#nav-menu-btn {
   display: none;
   flex-direction: column;
   justify-content: center;
@@ -540,7 +548,8 @@ footer a:hover { color: var(--off-white); }
   nav { padding: 18px 20px; }
   .nav-right { gap: 14px; }
   .nav-logo, #nav-cart-btn, .nav-menu-btn { position: relative; z-index: 2; }
-  .nav-menu-btn { display: flex; }
+  #nav-menu-btn { display: flex; }
+  .nav-links .nav-home-link { display: flex; }
   .nav-links {
     position: fixed;
     top: 0; left: 0; right: 0;
@@ -579,6 +588,7 @@ footer a:hover { color: var(--off-white); }
   </a>
   <div class="nav-right">
     <div class="nav-links" id="nav-links">
+      <a href="index.html" class="nav-home-link">Home</a>
       <a href="https://maliv.bandcamp.com/album/blu-2" target="_blank">Buy Mixtape</a>
       <a id="nav-shop" href="shop.html">Shop</a>
       <a href="index.html">Review</a>
