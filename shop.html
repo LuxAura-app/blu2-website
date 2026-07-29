@@ -227,6 +227,36 @@ nav {
   .product-card-inner:hover .product-media.has-back .media-front { opacity: 0; }
   .product-card-inner:hover .product-media.has-back .media-back { opacity: 1; }
 }
+/* Explicit tap-driven equivalent for touch devices — see .product-view-toggle
+   below, toggled by JS adding/removing this class rather than :hover. */
+.product-media.show-back .media-front { opacity: 0; }
+.product-media.show-back .media-back { opacity: 1; }
+
+/* Front/Back tap toggle — only shown where there's no hovering pointer to
+   drive the passive crossfade above, so desktop never sees a redundant
+   control alongside the hover preview. */
+.product-view-toggle {
+  display: none;
+  gap: 8px;
+  padding: 14px 24px 0;
+}
+@media (hover: none) {
+  .product-view-toggle { display: flex; }
+}
+.view-btn {
+  flex: 1;
+  min-height: 36px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.view-btn.selected { border-color: var(--orange); color: var(--off-white); }
 .product-media .placeholder-art {
   display: flex;
   align-items: center;
@@ -738,6 +768,14 @@ function buildProductCard(group, index) {
         </div>
         ${group.badge ? `<div class="product-badge">${group.badge}</div>` : ""}
       </div>
+      ${
+        hasBack
+          ? `<div class="product-view-toggle" role="group" aria-label="View front or back">
+        <button type="button" class="view-btn selected" data-view="front">${images[0].label || "Front"}</button>
+        <button type="button" class="view-btn" data-view="back">${images[1].label || "Back"}</button>
+      </div>`
+          : ""
+      }
       <div class="product-info">
         <div class="product-name">${group.name}</div>
         <div class="product-desc">${group.desc}</div>
@@ -755,6 +793,23 @@ function buildProductCard(group, index) {
     const placeholder = card.querySelector(".placeholder-art");
     mainImg.style.display = "none";
     placeholder.style.display = "flex";
+  }
+
+  // Explicit front/back toggle for touch devices — the hover-swap above
+  // only fires on devices with a real hovering pointer (see the
+  // (hover: hover) and (pointer: fine) media query), so touch users need
+  // an actual tappable control to ever see the back image at all. Hidden
+  // via CSS on hover-capable devices (@media (hover: none)) so desktop
+  // isn't shown a redundant control alongside the passive hover preview.
+  if (hasBack) {
+    const media = card.querySelector(".product-media");
+    card.querySelectorAll("[data-view]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const showBack = btn.getAttribute("data-view") === "back";
+        media.classList.toggle("show-back", showBack);
+        card.querySelectorAll("[data-view]").forEach((b) => b.classList.toggle("selected", b === btn));
+      });
+    });
   }
 
   card.querySelectorAll("[data-size-id]").forEach((btn) => {
