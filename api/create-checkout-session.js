@@ -1,6 +1,5 @@
 const Stripe = require('stripe');
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const { buildVariantIndexByStripePriceId } = require('../lib/product-catalog');
 
 /*
  * Marketing consent UI note: Stripe Checkout has no native checkbox custom
@@ -16,71 +15,112 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
  */
 const MARKETING_CONSENT_FIELD_KEY = 'marketing_consent';
 
-function badRequest(res, message) {
-  res.status(400).json({ error: message });
+// Apliiq's own published policy: a package at or above this total weight
+// requires their "Upgraded Shipping" service instead of Standard.
+const UPGRADED_SHIPPING_THRESHOLD_OZ = 16;
+
+function badRequestResult(message) {
+  return { status: 400, body: { error: message } };
 }
 
-module.exports = async (req, res) => {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
-  }
+/**
+ * @param {Object} body raw request body — { items: [{ priceId, qty }] }
+ * @param {Object} [deps] injectable for tests
+ * @param {import('stripe')} [deps.stripe]
+ * @param {typeof buildVariantIndexByStripePriceId} [deps.buildVariantIndex]
+ * @param {string} [deps.siteUrl]
+ */
+async function handleCreateCheckoutSession(body, deps = {}) {
+  const stripe = deps.stripe || new Stripe(process.env.STRIPE_SECRET_KEY);
+  const buildVariantIndex = deps.buildVariantIndex || buildVariantIndexByStripePriceId;
 
-  const { items } = req.body || {};
+  const { items } = body || {};
   if (!Array.isArray(items) || items.length === 0) {
-    badRequest(res, 'items must be a non-empty array of { priceId, qty }');
-    return;
+    return badRequestResult('items must be a non-empty array of { priceId, qty }');
   }
   for (const item of items) {
     if (!item || typeof item.priceId !== 'string' || !Number.isInteger(item.qty) || item.qty < 1) {
-      badRequest(res, 'Each item needs a string priceId and a positive integer qty');
-      return;
+      return badRequestResult('Each item needs a string priceId and a positive integer qty');
     }
   }
 
   // Look up every price server-side — never trust a price/amount sent by the client.
   let subtotalCents = 0;
-  let totalQty = 0;
   const lineItems = [];
   for (const item of items) {
     let price;
     try {
       price = await stripe.prices.retrieve(item.priceId);
     } catch (err) {
-      badRequest(res, `Unknown price: ${item.priceId}`);
-      return;
+      return badRequestResult(`Unknown price: ${item.priceId}`);
     }
     if (!price.active || price.unit_amount == null) {
-      badRequest(res, `Price is not purchasable: ${item.priceId}`);
-      return;
+      return badRequestResult(`Price is not purchasable: ${item.priceId}`);
     }
     subtotalCents += price.unit_amount * item.qty;
-    totalQty += item.qty;
     lineItems.push({ price: item.priceId, quantity: item.qty });
   }
 
+  // Real per-variant weight (oz), stored on the Redis catalog record from
+  // Apliiq's own Add to Store payload (see api/apliiq/add-product.js's
+  // buildVariantRecord) — not an estimate. A cart item whose variant has no
+  // stored weight (e.g. a catalog entry created/edited by hand, bypassing
+  // Add to Store, or a variant deactivated after being added to someone's
+  // cart) contributes 0oz here rather than failing checkout; it's logged so
+  // the gap is visible without blocking a paying customer.
+  const variantIndex = await buildVariantIndex();
+  let totalWeightOz = 0;
+  const missingWeightPriceIds = [];
+  for (const item of items) {
+    const variant = variantIndex.get(item.priceId);
+    const weight = variant ? Number(variant.weight) : NaN;
+    if (Number.isFinite(weight) && weight > 0) {
+      totalWeightOz += weight * item.qty;
+    } else {
+      missingWeightPriceIds.push(item.priceId);
+    }
+  }
+  if (missingWeightPriceIds.length > 0) {
+    console.warn(
+      `[create-checkout-session] no stored weight for price(s) ${missingWeightPriceIds.join(', ')} — ` +
+        'treating as 0oz for shipping-tier purposes. Usually means the variant was created/edited without ' +
+        'going through Apliiq Add to Store, so its catalog record never got a weight.'
+    );
+  }
+
   const flatShippingCents = Number(process.env.SHOP_APLIIQ_FLAT_SHIPPING_CENTS || 0);
-  const additionalItemCents = Number(process.env.SHOP_APLIIQ_ADDITIONAL_ITEM_CENTS || 0);
+  // Apliiq requires Upgraded Shipping at UPGRADED_SHIPPING_THRESHOLD_OZ —
+  // its real cost isn't confirmed yet, so absent the env var this defaults
+  // to a conservative placeholder (2x Standard). Same caveat as
+  // SHOP_APLIIQ_FLAT_SHIPPING_CENTS itself: confirm the actual rate with
+  // Apliiq (or from a real order invoice) and set this env var explicitly
+  // before launch.
+  const upgradedShippingCents = process.env.SHOP_APLIIQ_UPGRADED_SHIPPING_CENTS
+    ? Number(process.env.SHOP_APLIIQ_UPGRADED_SHIPPING_CENTS)
+    : flatShippingCents * 2;
   const freeShippingThresholdCents = process.env.SHOP_FREE_SHIPPING_THRESHOLD_CENTS
     ? Number(process.env.SHOP_FREE_SHIPPING_THRESHOLD_CENTS)
     : null;
 
   const qualifiesForFreeShipping = freeShippingThresholdCents != null && subtotalCents >= freeShippingThresholdCents;
-  const shippingCents = qualifiesForFreeShipping
-    ? 0
-    : flatShippingCents + additionalItemCents * Math.max(0, totalQty - 1);
+  const isUpgradedTier = totalWeightOz >= UPGRADED_SHIPPING_THRESHOLD_OZ;
+  const shippingCents = qualifiesForFreeShipping ? 0 : isUpgradedTier ? upgradedShippingCents : flatShippingCents;
+  const shippingLabel = qualifiesForFreeShipping
+    ? 'Free shipping'
+    : isUpgradedTier
+      ? 'Upgraded shipping'
+      : 'Standard shipping';
 
-  const siteUrl = process.env.SITE_URL || `https://${req.headers.host}`;
+  const siteUrl = deps.siteUrl || process.env.SITE_URL;
 
   try {
     // Deliberately not enabling Stripe Tax (automatic_tax: { enabled: true })
     // — standard clothing is exempt from PA sales tax, and out-of-state
-    // economic nexus thresholds aren't a near-term concern at current
-    // volume. Revisit this if either changes: (1) non-clothing merch gets
-    // added (exemption no longer applies), or (2) sales grow enough
-    // multi-state to approach a state's economic nexus threshold. Until
-    // then, this is an intentional decision, not an oversight to "fix".
+    // economic nexus thresholds aren't a near-term concern. Revisit this if
+    // either changes: (1) non-clothing merch gets added (exemption no
+    // longer applies), or (2) sales grow enough multi-state to approach a
+    // state's economic nexus threshold. Until then, this is an intentional
+    // decision, not an oversight to "fix".
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: lineItems,
@@ -92,7 +132,7 @@ module.exports = async (req, res) => {
           shipping_rate_data: {
             type: 'fixed_amount',
             fixed_amount: { amount: shippingCents, currency: 'usd' },
-            display_name: qualifiesForFreeShipping ? 'Free shipping' : 'Standard shipping',
+            display_name: shippingLabel,
           },
         },
       ],
@@ -121,9 +161,24 @@ module.exports = async (req, res) => {
       cancel_url: `${siteUrl}/shop.html?checkout=cancelled`,
     });
 
-    res.status(200).json({ url: session.url });
+    return { status: 200, body: { url: session.url } };
   } catch (err) {
     console.error('create-checkout-session failed', err.type || err.name, err.message);
-    res.status(502).json({ error: 'Unable to start checkout right now.' });
+    return { status: 502, body: { error: 'Unable to start checkout right now.' } };
   }
-};
+}
+
+async function handler(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
+  const siteUrl = process.env.SITE_URL || `https://${req.headers.host}`;
+  const result = await handleCreateCheckoutSession(req.body, { siteUrl });
+  res.status(result.status).json(result.body);
+}
+
+handler.handleCreateCheckoutSession = handleCreateCheckoutSession; // exported for tests
+module.exports = handler;

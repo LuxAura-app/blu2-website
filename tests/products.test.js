@@ -1,6 +1,19 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { flattenProductToCards } = require('../lib/product-catalog');
+const { flattenProductToCards, buildVariantIndexByStripePriceId } = require('../lib/product-catalog');
+
+function fakeRedisClient(products) {
+  return {
+    async smembers() {
+      return products.map((p) => p.internalProductId);
+    },
+    async get(key) {
+      const id = key.replace(/^product:/, '');
+      const product = products.find((p) => p.internalProductId === id);
+      return product ? JSON.stringify(product) : null;
+    },
+  };
+}
 
 /**
  * Shape of a catalog record after api/apliiq/add-product.js has upserted a
@@ -64,4 +77,40 @@ test('flattenProductToCards surfaces isDefaultVariant:true when a catalog record
   };
   const cards = flattenProductToCards(withDefault);
   assert.deepEqual(cards.map((c) => c.isDefaultVariant), [false, false, true, false, false]);
+});
+
+test('buildVariantIndexByStripePriceId maps every active product\'s variants by their Stripe Price ID', async () => {
+  const withWeights = {
+    ...MULTI_VARIANT_PRODUCT,
+    variants: MULTI_VARIANT_PRODUCT.variants.map((v) => ({ ...v, weight: 7.0, weightUnit: 'oz' })),
+  };
+  const client = fakeRedisClient([withWeights]);
+
+  const index = await buildVariantIndexByStripePriceId(client);
+
+  assert.equal(index.size, 5);
+  assert.equal(index.get('price_s').weight, 7.0);
+  assert.equal(index.get('price_xxl').sku, 'APQ-5989067S2A1');
+  assert.equal(index.has('price_ghost'), false);
+});
+
+test('buildVariantIndexByStripePriceId skips inactive products, matching everything else customer-facing', async () => {
+  const inactiveProduct = { ...MULTI_VARIANT_PRODUCT, internalProductId: 'apliiq-inactive', active: false };
+  const client = fakeRedisClient([inactiveProduct]);
+
+  const index = await buildVariantIndexByStripePriceId(client);
+
+  assert.equal(index.size, 0);
+});
+
+test('buildVariantIndexByStripePriceId omits variants with no stripePriceId rather than mapping them to undefined', async () => {
+  const withoutStripeIds = {
+    ...MULTI_VARIANT_PRODUCT,
+    variants: MULTI_VARIANT_PRODUCT.variants.map((v) => ({ ...v, stripePriceId: undefined })),
+  };
+  const client = fakeRedisClient([withoutStripeIds]);
+
+  const index = await buildVariantIndexByStripePriceId(client);
+
+  assert.equal(index.size, 0);
 });

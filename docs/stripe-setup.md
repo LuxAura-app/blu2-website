@@ -25,9 +25,32 @@ product goes `active: true` in `shop.html`. Run
 Already wired: server-side price lookups (never trusts a client-sent
 price), `shipping_address_collection: { allowed_countries: ['US'] }`,
 `billing_address_collection: 'required'` (this is how name gets collected —
-Checkout has no bare name-only field), `phone_number_collection: { enabled: true }`,
-and computed flat/free shipping from `SHOP_APLIIQ_FLAT_SHIPPING_CENTS` /
-`SHOP_APLIIQ_ADDITIONAL_ITEM_CENTS` / `SHOP_FREE_SHIPPING_THRESHOLD_CENTS`.
+Checkout has no bare name-only field), `phone_number_collection: { enabled: true }`.
+
+### Shipping: weight-tiered, not a flat per-item surcharge
+
+Before creating the Session, `handleCreateCheckoutSession` sums every cart
+line's real stored `weight` (oz) via
+`buildVariantIndexByStripePriceId` (`lib/product-catalog.js`) — the actual
+value Apliiq sent in its Add to Store payload, not an estimate. A line
+whose variant has no stored weight (hand-edited catalog entry, or a
+variant deactivated after being added to a cart) contributes 0oz and logs
+a warning, rather than failing checkout.
+
+- Under 16oz total → `SHOP_APLIIQ_FLAT_SHIPPING_CENTS` ("Standard shipping").
+- 16oz or more → `SHOP_APLIIQ_UPGRADED_SHIPPING_CENTS` ("Upgraded
+  shipping") — this mirrors Apliiq's own published threshold requiring
+  their Upgraded Shipping service at that weight. Absent the env var, this
+  defaults to 2x the flat rate as a placeholder; neither that default nor
+  the flat rate itself is a confirmed real cost yet — confirm both with
+  Apliiq (or from a real order invoice) before launch.
+- `SHOP_FREE_SHIPPING_THRESHOLD_CENTS` (by subtotal) overrides either tier
+  to $0 ("Free shipping") regardless of weight.
+
+`SHOP_APLIIQ_ADDITIONAL_ITEM_CENTS` (a flat per-extra-item surcharge) was
+removed — the weight tiers already capture "more items costs more to
+ship" more accurately than a fixed per-item add-on did, so keeping both
+would have been redundant, dead-if-unset config.
 
 ### The marketing-consent checkbox isn't literally a checkbox
 

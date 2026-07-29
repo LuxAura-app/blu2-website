@@ -17,11 +17,17 @@ against a fixed payload+secret so the expected hash is a known value),
 Product Search's catalog filtering (`tests/product-search.test.js`), and
 Add to Store's Redis-only writes plus its validation-error path
 (`tests/add-product.test.js`, mocked catalog upsert — Add to Store never
-calls Stripe), and `scripts/activate-product.js`'s flat-price Stripe
+calls Stripe), `scripts/activate-product.js`'s flat-price Stripe
 Product/Price creation and re-run idempotency
-(`tests/activate-product.test.js`, mocked Stripe and catalog). No test in
-this suite ever places a live Apliiq order or calls a real API — see the
-Apliiq section below for why that matters.
+(`tests/activate-product.test.js`, mocked Stripe and catalog), and
+`api/create-checkout-session.js`'s weight-tiered shipping logic —
+standard vs. upgraded vs. free-shipping-overrides-both, plus a missing/
+absent stored weight falling back to 0oz instead of throwing
+(`tests/create-checkout-session.test.js`, mocked Stripe + variant index;
+`tests/products.test.js` separately covers `buildVariantIndexByStripePriceId`
+itself against a fake Redis client). No test in this suite ever places a
+live Apliiq order or calls a real API — see the Apliiq section below for
+why that matters.
 
 ## Activating an Apliiq product
 
