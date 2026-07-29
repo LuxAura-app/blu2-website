@@ -74,6 +74,13 @@ module.exports = async (req, res) => {
   const siteUrl = process.env.SITE_URL || `https://${req.headers.host}`;
 
   try {
+    // Deliberately not enabling Stripe Tax (automatic_tax: { enabled: true })
+    // — standard clothing is exempt from PA sales tax, and out-of-state
+    // economic nexus thresholds aren't a near-term concern at current
+    // volume. Revisit this if either changes: (1) non-clothing merch gets
+    // added (exemption no longer applies), or (2) sales grow enough
+    // multi-state to approach a state's economic nexus threshold. Until
+    // then, this is an intentional decision, not an oversight to "fix".
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: lineItems,

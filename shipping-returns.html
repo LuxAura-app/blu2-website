@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Shipping & Returns — Better Left Unsaid 2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+:root {
+  --orange: #E8501A;
+  --black: #050505;
+  --off-white: #F0EDE8;
+  --muted: #8F8F8F;
+  --border: #181818;
+  --panel: #0D0D0D;
+}
+
+body {
+  background: var(--black);
+  color: var(--off-white);
+  font-family: 'Inter', sans-serif;
+  font-weight: 300;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+a:focus-visible, button:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 3px;
+}
+
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 22px 40px;
+  background: linear-gradient(to bottom, rgba(5,5,5,0.65) 0%, rgba(5,5,5,0) 100%);
+}
+.nav-logo { cursor: pointer; display: flex; align-items: center; }
+.nav-right { display: flex; align-items: center; gap: 28px; }
+.nav-right a {
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-decoration: none;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+.nav-right a:hover { color: var(--off-white); }
+
+.policy-hero {
+  padding: 150px 40px 50px;
+  border-bottom: 1px solid var(--border);
+  max-width: 900px;
+  margin: 0 auto;
+}
+.policy-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--orange);
+  margin-bottom: 16px;
+}
+.policy-title {
+  font-size: clamp(32px, 6vw, 56px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.policy-body {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 60px 40px 100px;
+}
+.policy-section { margin-bottom: 44px; }
+.policy-section:last-child { margin-bottom: 0; }
+.policy-section-title {
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--orange);
+  margin-bottom: 14px;
+}
+.policy-section p {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.policy-section p:last-child { margin-bottom: 0; }
+.policy-section a { color: var(--muted); text-decoration: underline; }
+.policy-section a:hover { color: var(--off-white); }
+.policy-section ul {
+  margin: 10px 0 14px 18px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+.policy-section li { margin-bottom: 6px; }
+
+footer {
+  border-top: 1px solid var(--border);
+  padding: 28px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+footer p, footer a {
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-decoration: none;
+}
+footer a:hover { color: var(--off-white); }
+
+@media (max-width: 640px) {
+  nav { padding: 18px 20px; }
+  .policy-hero { padding: 120px 20px 40px; }
+  .policy-body { padding: 40px 20px 70px; }
+  footer { padding: 24px 20px; flex-direction: column; justify-content: center; text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">
+    <img src="img/afd-logo.png" alt="All Flights Delayed" style="height:56px;width:56px;object-fit:contain;opacity:0.75;"/>
+  </a>
+  <div class="nav-right">
+    <a href="shop.html">Shop</a>
+    <a href="index.html">Home</a>
+  </div>
+</nav>
+
+<div class="policy-hero">
+  <div class="policy-eyebrow">Better Left Unsaid 2</div>
+  <h1 class="policy-title">Shipping &amp; Returns</h1>
+</div>
+
+<div class="policy-body">
+  <div class="policy-section">
+    <div class="policy-section-title">Shipping cost</div>
+    <p>Shipping is a flat $5, calculated automatically at checkout. We currently ship to US addresses only.</p>
+  </div>
+
+  <div class="policy-section">
+    <div class="policy-section-title">Production time</div>
+    <p id="production-time-note">Every piece is made to order — please allow 5-7 business days for production before your item ships. This is a conservative estimate and may be adjusted as we get real-world data from fulfillment.</p>
+  </div>
+
+  <div class="policy-section">
+    <div class="policy-section-title">Returns &amp; exchanges</div>
+    <p>All sales are final — each piece is made to order specifically for you, so we can't accept returns or exchanges for size or preference.</p>
+    <p>If your item arrives damaged or defective, <a id="policy-contact-link" href="mailto:titledtentatively@gmail.com">contact us</a> within 14 days of delivery with photos of the issue, and we'll get a replacement out to you at no cost. We don't offer refunds.</p>
+  </div>
+
+  <div class="policy-section">
+    <div class="policy-section-title">Questions</div>
+    <p>Reach out any time at <a id="policy-contact-link-2" href="mailto:titledtentatively@gmail.com">titledtentatively@gmail.com</a> and we'll get back to you.</p>
+  </div>
+</div>
+
+<footer>
+  <p>© 2026 AllFlightsDelayed</p>
+  <p>betterleftunsaid2.com</p>
+</footer>
+
+<script>
+(async function init() {
+  try {
+    const res = await fetch("/api/shop-config");
+    if (!res.ok) throw new Error("bad response");
+    const data = await res.json();
+    if (data.productionTimeDays) {
+      document.getElementById("production-time-note").textContent =
+        `Every piece is made to order — please allow ${data.productionTimeDays} for production before your item ships. This is a conservative estimate and may be adjusted as we get real-world data from fulfillment.`;
+    }
+    if (data.supportEmail) {
+      document.getElementById("policy-contact-link").href = `mailto:${data.supportEmail}`;
+      document.getElementById("policy-contact-link-2").href = `mailto:${data.supportEmail}`;
+      document.getElementById("policy-contact-link-2").textContent = data.supportEmail;
+    }
+  } catch (e) {
+    // keep the static defaults already in the markup
+  }
+})();
+</script>
+</body>
+</html>

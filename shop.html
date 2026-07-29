@@ -353,6 +353,22 @@ nav {
 .product-buy:hover { border-color: var(--orange); color: var(--orange); }
 .product-buy:active { transform: scale(0.96); }
 
+.card-production-note {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 10px;
+}
+.card-policy-link {
+  display: inline-block;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-decoration: underline;
+  margin-top: 8px;
+}
+.card-policy-link:hover { color: var(--off-white); }
+
 .product-sizes {
   display: flex;
   flex-wrap: wrap;
@@ -600,10 +616,8 @@ footer {
   border-top: 1px solid var(--border);
   padding: 28px 40px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
+  flex-direction: column;
+  gap: 20px;
 }
 footer p, footer a {
   font-size: 10px;
@@ -613,6 +627,14 @@ footer p, footer a {
   text-decoration: none;
 }
 footer a:hover { color: var(--off-white); }
+.footer-policy-links { display: flex; justify-content: center; gap: 28px; flex-wrap: wrap; }
+.footer-main-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
 .social-links { display: flex; gap: 24px; }
 
 /* ── RESPONSIVE ── */
@@ -646,7 +668,8 @@ footer a:hover { color: var(--off-white); }
   .shop-hero { padding: 120px 20px 50px; }
   .shop-grid-section { padding: 50px 20px 90px; }
   .shop-policy { padding: 30px 20px; }
-  footer { padding: 24px 20px; flex-direction: column; justify-content: center; text-align: center; }
+  footer { padding: 24px 20px; }
+  .footer-main-row { flex-direction: column; justify-content: center; text-align: center; }
   .social-links { justify-content: center; }
   .checkout-banner { padding: 16px 20px 0; }
   .cart-drawer { width: 100vw; }
@@ -694,22 +717,31 @@ footer a:hover { color: var(--off-white); }
 <div class="shop-policy">
   <div class="shop-policy-col">
     <div class="shop-policy-title">Shipping</div>
-    <p>Flat $5 shipping, calculated at checkout. Every piece is made to order, so please allow a few extra days for production before your item ships.</p>
+    <p>Flat $5 shipping, calculated at checkout. Ships within the US only for now.</p>
+    <p id="production-time-note">Made to order — ships in 5-7 business days.</p>
   </div>
   <div class="shop-policy-col">
     <div class="shop-policy-title">Returns</div>
-    <p>Made-to-order apparel is final sale — no refunds. If your order arrives damaged or defective, email <a href="mailto:titledtentatively@gmail.com">titledtentatively@gmail.com</a> within 14 days of delivery for a replacement.</p>
+    <p>All sales are final — each piece is made to order specifically for you. If your item arrives damaged or defective, <a href="mailto:titledtentatively@gmail.com">contact us</a> within 14 days with photos and we'll get a replacement out to you at no cost.</p>
+    <p><a href="shipping-returns.html">Full shipping &amp; returns policy →</a></p>
   </div>
 </div>
 
 <footer>
-  <p>© 2026 AllFlightsDelayed</p>
-  <div class="social-links">
-    <a href="https://instagram.com/mali__v" target="_blank">Instagram</a>
-    <a href="https://www.youtube.com/@718Mali" target="_blank">YouTube</a>
-    <a href="https://www.tiktok.com/@mali__v" target="_blank">TikTok</a>
+  <div class="footer-policy-links">
+    <a href="shipping-returns.html">Shipping &amp; Returns</a>
+    <a href="privacy.html">Privacy Policy</a>
+    <a id="footer-contact-link" href="mailto:titledtentatively@gmail.com">Contact</a>
   </div>
-  <p>betterleftunsaid2.com</p>
+  <div class="footer-main-row">
+    <p>© 2026 AllFlightsDelayed</p>
+    <div class="social-links">
+      <a href="https://instagram.com/mali__v" target="_blank">Instagram</a>
+      <a href="https://www.youtube.com/@718Mali" target="_blank">YouTube</a>
+      <a href="https://www.tiktok.com/@mali__v" target="_blank">TikTok</a>
+    </div>
+    <p>betterleftunsaid2.com</p>
+  </div>
 </footer>
 
 <!-- CART DRAWER -->
@@ -725,7 +757,7 @@ footer a:hover { color: var(--off-white); }
       <span>Subtotal</span>
       <span id="cart-subtotal">$0.00</span>
     </div>
-    <div class="cart-shipping-note">+ $5.00 flat-rate shipping, added at checkout</div>
+    <div class="cart-shipping-note">+ $5.00 flat-rate shipping, added at checkout — US addresses only</div>
     <button class="cart-checkout-btn" id="cart-checkout-btn" onclick="startCheckout()">Checkout</button>
     <div class="cart-status" id="cart-status"></div>
   </div>
@@ -799,6 +831,26 @@ async function loadProducts() {
     PRODUCTS = Array.isArray(data) ? data : [];
   } catch (e) {
     PRODUCTS = [];
+  }
+}
+
+/* Env-driven display copy (production time, support contact) — see
+   api/shop-config.js. Defaults here match that endpoint's own fallback,
+   so the page still shows a sensible value even if this fetch fails. */
+let SHOP_CONFIG = { productionTimeDays: "5-7 business days", supportEmail: null };
+
+async function loadShopConfig() {
+  try {
+    const res = await fetch("/api/shop-config");
+    if (!res.ok) throw new Error("bad response");
+    const data = await res.json();
+    if (data && typeof data === "object") {
+      if (data.productionTimeDays) SHOP_CONFIG.productionTimeDays = data.productionTimeDays;
+      if (data.supportEmail) SHOP_CONFIG.supportEmail = data.supportEmail;
+    }
+  } catch (e) {
+    // keep the static defaults above — the page still discloses a
+    // production time even if this fetch fails.
   }
 }
 
@@ -924,6 +976,8 @@ function buildProductCard(group, index) {
           <span class="product-price">${priceLabel}</span>
           <button class="product-buy" type="button">Add to Cart</button>
         </div>
+        <div class="card-production-note">Made to order — ships in ${SHOP_CONFIG.productionTimeDays}.</div>
+        <a class="card-policy-link" href="shipping-returns.html">Shipping &amp; Returns →</a>
         ${hasDetails ? `
         <button type="button" class="details-toggle" aria-expanded="false">Details +</button>
         <div class="product-details" hidden>${detailsHtml}</div>` : ""}
@@ -1167,7 +1221,13 @@ function showCheckoutBanner() {
 }
 
 (async function init() {
-  await loadProducts();
+  await Promise.all([loadProducts(), loadShopConfig()]);
+
+  const productionNote = document.getElementById("production-time-note");
+  if (productionNote) productionNote.textContent = `Made to order — ships in ${SHOP_CONFIG.productionTimeDays}.`;
+
+  const footerContact = document.getElementById("footer-contact-link");
+  if (footerContact && SHOP_CONFIG.supportEmail) footerContact.href = `mailto:${SHOP_CONFIG.supportEmail}`;
 
   const grid = document.getElementById("shop-grid");
   const activeProducts = PRODUCTS.filter((p) => p.active);
