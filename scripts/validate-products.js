@@ -69,6 +69,21 @@ async function main() {
     console.warn('STRIPE_SECRET_KEY not set — skipping live Stripe price checks.\n');
   }
 
+  // Dead config check: SHOP_APLIIQ_ADDITIONAL_ITEM_CENTS (a flat per-extra-
+  // item shipping surcharge) was removed when api/create-checkout-session.js
+  // switched to real weight-tiered shipping (SHOP_APLIIQ_FLAT_SHIPPING_CENTS /
+  // SHOP_APLIIQ_UPGRADED_SHIPPING_CENTS) — it's no longer read anywhere.
+  // Warn rather than silently ignore it, so a still-configured value in
+  // Vercel doesn't sit there looking load-bearing when it isn't.
+  if (process.env.SHOP_APLIIQ_ADDITIONAL_ITEM_CENTS) {
+    console.warn(
+      'SHOP_APLIIQ_ADDITIONAL_ITEM_CENTS is set but unused — api/create-checkout-session.js ' +
+        'now calculates shipping by weight tier (SHOP_APLIIQ_FLAT_SHIPPING_CENTS / ' +
+        'SHOP_APLIIQ_UPGRADED_SHIPPING_CENTS) instead of a flat per-extra-item surcharge. ' +
+        'Safe to remove this env var from Vercel.\n'
+    );
+  }
+
   if (cards.length === 0) {
     console.log('Catalog is empty — nothing to validate yet.');
     return;
