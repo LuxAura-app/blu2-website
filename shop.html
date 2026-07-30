@@ -601,7 +601,9 @@ nav {
 .checkout-banner {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 16px 40px 0;
+  /* top padding matches .shop-hero's so the banner clears the fixed nav
+     instead of rendering underneath its logo/menu */
+  padding: 150px 40px 0;
 }
 .checkout-banner-inner {
   border: 1px solid var(--border);
@@ -611,6 +613,9 @@ nav {
   color: var(--off-white);
 }
 .checkout-banner-inner.success { border-color: var(--orange); }
+/* When the banner is shown it already clears the fixed nav, so the hero
+   below it doesn't need its own full nav-clearance padding too. */
+body.has-checkout-banner .shop-hero { padding-top: 50px; }
 
 /* ── FOOTER (matches index.html) ── */
 footer {
@@ -672,7 +677,7 @@ footer a:hover { color: var(--off-white); }
   footer { padding: 24px 20px; }
   .footer-main-row { flex-direction: column; justify-content: center; text-align: center; }
   .social-links { justify-content: center; }
-  .checkout-banner { padding: 16px 20px 0; }
+  .checkout-banner { padding: 120px 20px 0; }
   .cart-drawer { width: 100vw; }
 }
 </style>
@@ -1223,6 +1228,7 @@ function showCheckoutBanner() {
     return;
   }
   banner.style.display = "block";
+  document.body.classList.add("has-checkout-banner");
 }
 
 (async function init() {
