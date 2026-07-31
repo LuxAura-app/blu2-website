@@ -99,7 +99,7 @@ price_...` from `api/create-checkout-session.js`.
 deliberately skips any variant that already has a `stripeProductId`, so
 against already-active products it's a no-op.
 
-Fix: after the live key is live in Vercel, run
+### Option A — run the migration script locally
 
 ```bash
 STRIPE_SECRET_KEY=sk_live_... node scripts/relink-stripe-live.js           # every product
@@ -114,6 +114,34 @@ creates a new Stripe Product + Price at that variant's existing stored
 left alone (harmless, just orphaned in test mode). Run
 `node scripts/validate-products.js` afterward (with the live key set) to
 confirm every active variant's price now resolves.
+
+This needs the real live `STRIPE_SECRET_KEY` and Redis REST credentials in
+your shell. If those are marked **Sensitive** in Vercel, `vercel env pull`
+returns them blank by design — you won't be able to get them this way
+without revealing/rotating them.
+
+### Option B — run it through Vercel instead, via `api/admin/relink-stripe-live.js`
+
+Same underlying logic (`scripts/relink-stripe-live.js`'s `relinkProduct`),
+but runs as a deployed serverless function, where the real
+`STRIPE_SECRET_KEY`/Redis credentials are already injected at runtime — no
+one needs to see or export them locally. Gated by the same bearer token as
+the other `/api/admin/*` endpoints (`ADMIN_REPORT_TOKEN`, see
+`docs/reporting.md`).
+
+```bash
+curl -X POST -H "Authorization: Bearer $ADMIN_REPORT_TOKEN" \
+  "https://www.betterleftunsaid2.com/api/admin/relink-stripe-live?dryRun=true"
+# review the old->new price ID mapping in the JSON response, then:
+curl -X POST -H "Authorization: Bearer $ADMIN_REPORT_TOKEN" \
+  "https://www.betterleftunsaid2.com/api/admin/relink-stripe-live"
+```
+
+Optional `?id=<internalProductId>` to target one catalog entry instead of
+every product. **This route is temporary** — it mutates live billing data,
+so delete `api/admin/relink-stripe-live.js` (and its test) once the catalog
+is relinked, rather than leaving a live-data-mutating endpoint reachable
+indefinitely.
 
 ## Webhook registration
 
