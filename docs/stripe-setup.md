@@ -85,6 +85,36 @@ Enable Link at **Dashboard → Payment methods → Link** — this is a Checkout
 setting, not code, and gives returning customers autofilled
 email/address/payment on future visits.
 
+## Switching the Stripe account from test mode to live mode
+
+Test-mode and live-mode Products/Prices are entirely separate objects in
+Stripe. Flipping `STRIPE_SECRET_KEY` from `sk_test_...` to `sk_live_...` (and
+redeploying) does **not** migrate them — every variant's `stripePriceId` in
+the Redis catalog still points at the old test-mode price. Checkout then
+calls `stripe.prices.retrieve()` with the live key against an ID that only
+ever existed in test mode, which fails and surfaces as `Unknown price:
+price_...` from `api/create-checkout-session.js`.
+
+`node scripts/activate-product.js` can't fix this by re-running — it
+deliberately skips any variant that already has a `stripeProductId`, so
+against already-active products it's a no-op.
+
+Fix: after the live key is live in Vercel, run
+
+```bash
+STRIPE_SECRET_KEY=sk_live_... node scripts/relink-stripe-live.js           # every product
+STRIPE_SECRET_KEY=sk_live_... node scripts/relink-stripe-live.js --dry-run # preview first
+STRIPE_SECRET_KEY=sk_live_... node scripts/relink-stripe-live.js apliiq-5989067  # one product
+```
+
+against the **same production Redis** the site uses. For every variant this
+creates a new Stripe Product + Price at that variant's existing stored
+`priceCents` (no re-entering a price) and overwrites `stripeProductId`/
+`stripePriceId` on the catalog record. The old test-mode Products/Prices are
+left alone (harmless, just orphaned in test mode). Run
+`node scripts/validate-products.js` afterward (with the live key set) to
+confirm every active variant's price now resolves.
+
 ## Webhook registration
 
 1. Register an endpoint at `https://www.betterleftunsaid2.com/api/stripe-webhook`
