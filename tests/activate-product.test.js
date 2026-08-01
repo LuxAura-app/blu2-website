@@ -159,6 +159,48 @@ test('throws for an unknown internalProductId instead of creating anything', asy
   assert.equal(stripe.calls.products.length, 0);
 });
 
+test('sets metadata.inventory_key only when a variant declares one, leaving ordinary variants unaffected', async () => {
+  const stripe = fakeStripe();
+  const upsert = fakeUpsert();
+  const record = {
+    name: 'BLU2 — Presale Tee',
+    internalProductId: 'self-blu2-presale-tee',
+    provider: 'self',
+    variants: [
+      { sku: 'RT-BLU2-PRESALE-L', size: 'l', inventoryKey: 'RT-BLU2-PRESALE' },
+      { sku: 'RT-BLU2-PRESALE-XXL', size: 'xxl', inventoryKey: 'RT-BLU2-PRESALE' },
+    ],
+  };
+  const getProduct = fakeGetProduct(record);
+
+  await activateProduct('self-blu2-presale-tee', '40.00', { stripe, getProduct, upsert });
+
+  assert.equal(stripe.calls.products.length, 2);
+  // Two different SKUs/sizes, but both point at the same shared pool key.
+  assert.equal(stripe.calls.products[0].metadata.inventory_key, 'RT-BLU2-PRESALE');
+  assert.equal(stripe.calls.products[1].metadata.inventory_key, 'RT-BLU2-PRESALE');
+  assert.equal(stripe.calls.products[0].metadata.provider_variant_id, 'RT-BLU2-PRESALE-L');
+  assert.equal(stripe.calls.products[1].metadata.provider_variant_id, 'RT-BLU2-PRESALE-XXL');
+  assert.equal(stripe.calls.products[0].metadata.internal_product_id, 'self-blu2-presale-tee');
+  assert.equal(stripe.calls.products[0].metadata.size, 'l');
+  assert.equal(stripe.calls.products[1].metadata.size, 'xxl');
+});
+
+test('an ordinary variant with no inventoryKey gets no metadata.inventory_key at all', async () => {
+  const stripe = fakeStripe();
+  const upsert = fakeUpsert();
+  const record = {
+    name: 'Test Product',
+    internalProductId: 'apliiq-1',
+    variants: [{ sku: 'APQ-1S1', size: 's' }],
+  };
+  const getProduct = fakeGetProduct(record);
+
+  await activateProduct('apliiq-1', '45.00', { stripe, getProduct, upsert });
+
+  assert.equal('inventory_key' in stripe.calls.products[0].metadata, false);
+});
+
 test('rejects a non-numeric --price', async () => {
   const stripe = fakeStripe();
   const upsert = fakeUpsert();

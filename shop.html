@@ -370,6 +370,44 @@ nav {
 }
 .card-policy-link:hover { color: var(--off-white); }
 
+.presale-meta { margin-bottom: 14px; }
+.presale-countdown {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--orange);
+  margin-bottom: 6px;
+}
+.presale-claimed {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+}
+.presale-ship-note {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+  margin-top: 8px;
+}
+.presale-closed-panel {
+  padding-top: 4px;
+  margin-bottom: 4px;
+}
+.presale-closed-headline {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--orange);
+  margin-bottom: 8px;
+}
+.presale-closed-sub {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 .product-sizes {
   display: flex;
   flex-wrap: wrap;
@@ -799,6 +837,12 @@ const IMAGE_OVERRIDES = {
       { src: "img/products/blu2-tee-back.png", label: "Back" },
     ],
   },
+  "self-blu2-presale-tee": {
+    images: [
+      { src: "img/products/blu2-presale-tee-front.png", label: "Front" },
+      { src: "img/products/blu2-presale-tee-back.png", label: "Back" },
+    ],
+  },
 };
 
 /* Per-product long-form copy, keyed the same way as IMAGE_OVERRIDES —
@@ -827,6 +871,21 @@ const PRODUCT_COPY_OVERRIDES = {
     fitNote: "Runs true to the oversized fit shown. Want the full boxy silhouette? Order true to size. Prefer something closer to a regular tee? Size down one.",
     care: "Machine wash cold, inside out. Tumble dry low or hang dry to protect the print.",
   },
+  "self-blu2-presale-tee": {
+    shortDesc: "Some things are better left unsaid. This is what happens after.",
+    fullDescription: [
+      "The front catches the moment it happens — a rose going up in flame, the fire climbing off the petals and bending itself into letters, spelling out the words as they burn: BETTER LEFT UNSAID 2. It's not text printed next to the art. It's the art becoming the text.",
+      "Flip it, and the fire's already gone out. The back is the morning after — scattered embers, petals turned to ash and drifting soot, still faintly glowing where the heat hasn't fully left them. Beneath it: “Some things better left unsaid are better off in the past” — Mali V. One story, front to back — the burn, then the aftermath.",
+      "Printed on the same 7.5oz heavyweight, oversized cut as the rest of the BLU2 line — built to hold its shape and its color, not just look good in a photo.",
+    ],
+    features: [
+      "Front: full burning-rose graphic with integrated fire-lettering, “BETTER LEFT UNSAID 2”",
+      "Back: ember/ash aftermath artwork with Mali V lyric line",
+      "7.5oz heavyweight, 100% USA cotton, oversized fit with slight drop shoulder",
+      "Reinforced double-needle stitching at neck, sleeves, and hem",
+      "Limited presale run — 50 pieces, printed once",
+    ],
+  },
 };
 
 async function loadProducts() {
@@ -847,6 +906,7 @@ let SHOP_CONFIG = {
   productionTimeCopy:
     "Made to order — ships within 1 week. Standard shipping typically takes an additional 2-7 business days to arrive, for a total of about 1-2 weeks.",
   supportEmail: null,
+  presaleShipEstimateCopy: "Ships in 4-6 weeks",
 };
 
 async function loadShopConfig() {
@@ -857,6 +917,7 @@ async function loadShopConfig() {
     if (data && typeof data === "object") {
       if (data.productionTimeCopy) SHOP_CONFIG.productionTimeCopy = data.productionTimeCopy;
       if (data.supportEmail) SHOP_CONFIG.supportEmail = data.supportEmail;
+      if (data.presaleShipEstimateCopy) SHOP_CONFIG.presaleShipEstimateCopy = data.presaleShipEstimateCopy;
     }
   } catch (e) {
     // keep the static defaults above — the page still discloses a
@@ -917,8 +978,53 @@ function groupProducts(products) {
       minPriceCents: Math.min(...prices),
       maxPriceCents: Math.max(...prices),
       defaultVariantId: defaultVariant.id,
+      // Presale fields — undefined/false for every ordinary product.
+      // presaleRemaining/presaleClaimed/isPresaleClosed come from
+      // api/products.js (inventory-derived, computed server-side so the
+      // frontend never decides "closed" on its own); the rest come
+      // straight from the Redis catalog record via flattenProductToCards.
+      isPresale: Boolean(first.isPresale),
+      isPresaleClosed: Boolean(first.isPresaleClosed),
+      presaleEndsAt: first.presaleEndsAt || null,
+      presaleGoal: first.presaleGoal,
+      presaleCapUnits: first.presaleCapUnits,
+      presaleClaimed: first.presaleClaimed,
     };
   });
+}
+
+/* ────────────────────────────────────────────
+   PRESALE COUNTDOWN
+   Purely a display timer — closing itself is decided server-side
+   (isPresaleClosed, computed fresh on every /api/products load and
+   re-enforced at checkout by api/create-checkout-session.js). This just
+   counts down to zero and stops; it never flips the card's purchase UI
+   into the closed state itself, since remaining/claimed can only really
+   change server-side.
+──────────────────────────────────────────── */
+function formatCountdown(msRemaining) {
+  const totalSeconds = Math.max(0, Math.floor(msRemaining / 1000));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const pad = (n) => String(n).padStart(2, "0");
+  return (days > 0 ? `${days}d ` : "") + `${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+}
+
+function startPresaleCountdown(el, endsAtIso) {
+  const endsAtMs = new Date(endsAtIso).getTime();
+  function tick() {
+    const remaining = endsAtMs - Date.now();
+    if (remaining <= 0) {
+      el.textContent = "Presale ending soon";
+      clearInterval(intervalId);
+      return;
+    }
+    el.textContent = `Ends in ${formatCountdown(remaining)}`;
+  }
+  tick();
+  const intervalId = setInterval(tick, 1000);
 }
 
 function buildProductCard(group, index) {
@@ -931,12 +1037,16 @@ function buildProductCard(group, index) {
     ? formatPrice(group.minPriceCents)
     : `${formatPrice(group.minPriceCents)}–${formatPrice(group.maxPriceCents)}`;
 
-  const sizeButtons = group.variants
-    .map(
-      (v) =>
-        `<button type="button" class="size-btn${v.id === selectedId ? " selected" : ""}" data-size-id="${v.id}">${v.sizeLabel || v.size || "—"}</button>`
-    )
-    .join("");
+  // A single-variant group (no size to pick — e.g. the presale tee) skips
+  // the size-picker row entirely rather than rendering one lone "—" button.
+  const sizeButtons = group.variants.length > 1
+    ? group.variants
+        .map(
+          (v) =>
+            `<button type="button" class="size-btn${v.id === selectedId ? " selected" : ""}" data-size-id="${v.id}">${v.sizeLabel || v.size || "—"}</button>`
+        )
+        .join("")
+    : "";
 
   // Hover-swap preview: front image crossfades to the second image in the
   // group's gallery/override set (its "back" shot) on hover, and back to
@@ -958,6 +1068,42 @@ function buildProductCard(group, index) {
     group.care ? `<p class="details-label">Care</p><p>${group.care}</p>` : "",
   ].join("");
 
+  // Presale badge/CTA/closing — isPresaleClosed is decided server-side
+  // (api/products.js, re-checked at checkout time by
+  // api/create-checkout-session.js); this only ever reads that flag, never
+  // computes "closed" itself. "LIMITED RUN — SOLD OUT" was picked over
+  // "PRE-SALE CLOSED" for the closed badge/headline — reads more final.
+  const badgeText = group.isPresaleClosed ? "LIMITED RUN — SOLD OUT" : group.isPresale ? "PRE-ORDER" : group.badge;
+  const buyLabel = group.isPresale && !group.isPresaleClosed ? "Pre-Order Now" : "Add to Cart";
+
+  const presaleMetaHtml = group.isPresale && !group.isPresaleClosed
+    ? `<div class="presale-meta">
+        <div class="presale-countdown" data-presale-countdown></div>
+        <div class="presale-claimed">${group.presaleClaimed != null ? group.presaleClaimed : 0} of ${group.presaleCapUnits} claimed${group.presaleGoal ? ` &middot; goal: ${group.presaleGoal}` : ""}</div>
+      </div>`
+    : "";
+  const presaleShipNoteHtml = group.isPresale && !group.isPresaleClosed
+    ? `<div class="presale-ship-note">${SHOP_CONFIG.presaleShipEstimateCopy}</div>`
+    : "";
+
+  // Once closed, there's nothing purchasable to show — no size picker, no
+  // price, no Add to Cart — just the closed-state copy. Artwork above stays
+  // untouched either way.
+  const purchaseSectionHtml = group.isPresaleClosed
+    ? `<div class="presale-closed-panel">
+        <div class="presale-closed-headline">Limited Run — Sold Out</div>
+        <div class="presale-closed-sub">This presale has closed — thanks to everyone who claimed one. Watch for the next drop.</div>
+      </div>`
+    : `${sizeButtons ? `<div class="product-sizes" role="group" aria-label="Select size">${sizeButtons}</div>` : ""}
+      ${presaleMetaHtml}
+      <div class="product-row">
+        <span class="product-price">${priceLabel}</span>
+        <button class="product-buy" type="button">${buyLabel}</button>
+      </div>
+      ${presaleShipNoteHtml}
+      <div class="card-production-note">${SHOP_CONFIG.productionTimeCopy}</div>
+      <a class="card-policy-link" href="shipping-returns.html">Shipping &amp; Returns →</a>`;
+
   card.innerHTML = `
     <div class="product-card-inner">
       <div class="product-media${hasBack ? " has-back" : ""}">
@@ -968,7 +1114,7 @@ function buildProductCard(group, index) {
           <div class="placeholder-word">${group.placeholderWord}</div>
           <div class="placeholder-mark">BLU2 · 2026</div>
         </div>
-        ${group.badge ? `<div class="product-badge">${group.badge}</div>` : ""}
+        ${badgeText ? `<div class="product-badge">${badgeText}</div>` : ""}
       </div>
       ${
         hasBack
@@ -981,13 +1127,7 @@ function buildProductCard(group, index) {
       <div class="product-info">
         <div class="product-name">${group.name}</div>
         <div class="product-desc">${group.desc}</div>
-        <div class="product-sizes" role="group" aria-label="Select size">${sizeButtons}</div>
-        <div class="product-row">
-          <span class="product-price">${priceLabel}</span>
-          <button class="product-buy" type="button">Add to Cart</button>
-        </div>
-        <div class="card-production-note">${SHOP_CONFIG.productionTimeCopy}</div>
-        <a class="card-policy-link" href="shipping-returns.html">Shipping &amp; Returns →</a>
+        ${purchaseSectionHtml}
         ${hasDetails ? `
         <button type="button" class="details-toggle" aria-expanded="false">Details +</button>
         <div class="product-details" hidden>${detailsHtml}</div>` : ""}
@@ -1026,7 +1166,15 @@ function buildProductCard(group, index) {
     });
   });
 
-  card.querySelector(".product-buy").addEventListener("click", () => addToCart(selectedId));
+  // Absent entirely in the closed state (purchaseSectionHtml renders no
+  // .product-buy at all there), so this must stay conditional.
+  const buyBtn = card.querySelector(".product-buy");
+  if (buyBtn) buyBtn.addEventListener("click", () => addToCart(selectedId));
+
+  if (group.isPresale && !group.isPresaleClosed && group.presaleEndsAt) {
+    const countdownEl = card.querySelector("[data-presale-countdown]");
+    if (countdownEl) startPresaleCountdown(countdownEl, group.presaleEndsAt);
+  }
 
   if (hasDetails) {
     const detailsToggle = card.querySelector(".details-toggle");

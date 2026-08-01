@@ -15,7 +15,7 @@ additive, not a rewrite.
     "stripeSessionId": "cs_...",
     "name": "...", "email": "...", "phone": "...",
     "marketingConsent": true,
-    "items": [{ "name": "...", "qty": 1, "unitPriceCents": 4500, "provider": "apliiq" }],
+    "items": [{ "name": "...", "qty": 1, "unitPriceCents": 4500, "provider": "apliiq", "sku": "...", "groupId": "...", "size": "m" }],
     "totalCents": 4500, "currency": "usd",
     "providerOrderIds": { "apliiq": "567890" },
     "timestamp": 1732000000000
@@ -44,6 +44,22 @@ Returns `{ orderCount, revenueCents, unitsByProduct, revenueByProvider, ordersBy
 (default CSV) — only ever includes consented contacts, for importing into
 whatever email/SMS tool you pick later. Sending the actual campaigns is out
 of scope for this build; this only captures clean, consented contact data.
+
+`GET /api/admin/presale-tally?groupId=self-blu2-presale-tee` (same token),
+optional `?from=`/`?to=` (default: all-time, not 30 days — a campaign can
+run longer than that) and `?format=csv` (rows of `size,qty`, meant to be
+handed straight to the print shop doing the run) or the default JSON
+(`{ groupId, totalUnits, orderCount, bySize }`). Sums each order's
+`items[].qty` by `items[].size`, filtered to `items[].groupId` — this is a
+straight sum of what was actually paid for, not a read of the shared
+`inventory:{key}` counter, so it stays correct even if that counter and
+the order log were ever to drift (e.g. a manual correction after an
+oversold alert):
+
+```bash
+curl -H "Authorization: Bearer $ADMIN_REPORT_TOKEN" \
+  "https://www.betterleftunsaid2.com/api/admin/presale-tally?groupId=self-blu2-presale-tee&format=csv"
+```
 
 ## What this doesn't do
 

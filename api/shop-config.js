@@ -25,5 +25,11 @@ module.exports = async (req, res) => {
     // SUPPORT_EMAIL explicitly once a dedicated public-facing support
     // address exists that's distinct from the internal alert recipient.
     supportEmail: process.env.SUPPORT_EMAIL || process.env.ORDER_NOTIFICATION_EMAIL || null,
+    // Presale estimated-ship disclaimer, shown next to price on any
+    // isPresale product card — env-driven for the same reason as
+    // productionTimeCopy: this is a placeholder until Royal Tees Printing's
+    // real quoted turnaround is confirmed, and needs to change without a
+    // code deploy once it is.
+    presaleShipEstimateCopy: process.env.PRESALE_SHIP_ESTIMATE_COPY || 'Ships in 4-6 weeks',
   });
 };

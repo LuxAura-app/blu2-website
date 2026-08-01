@@ -44,11 +44,21 @@ function buildFulfillmentItems(lineItems) {
   return (lineItems ? lineItems.data : []).map((li) => {
     const product = li.price.product;
     const metadata = (product && typeof product === 'object' && product.metadata) || {};
+    const sku = metadata.sku || metadata.provider_variant_id || (product && product.id) || li.id;
     return {
       internalOrderItemId: li.id,
       provider: metadata.fulfillment_provider || 'self',
       providerVariantId: metadata.provider_variant_id || null,
-      sku: metadata.sku || metadata.provider_variant_id || (product && product.id) || li.id,
+      sku,
+      // Which inventory:{key} counter to decrement — defaults to this
+      // item's own SKU (today's behavior for every single-SKU product),
+      // but scripts/activate-product.js sets metadata.inventory_key
+      // explicitly when a variant pools stock with siblings under a
+      // shared key instead (e.g. the presale tee's 5 sizes all sharing
+      // one RT-BLU2-PRESALE counter). See docs/shop-architecture.md.
+      inventoryKey: metadata.inventory_key || sku,
+      groupId: metadata.internal_product_id || null,
+      size: metadata.size || null,
       name: (product && product.name) || li.description || 'Item',
       quantity: li.quantity,
       retailPriceCents: li.price.unit_amount,
@@ -83,7 +93,11 @@ async function submitProviderGroup(providerName, items, session, externalReferen
 
     if (providerName === 'self') {
       for (const item of items) {
-        await decrementInventory(item.sku, item.quantity);
+        // Decrements the shared pool key (item.inventoryKey), not
+        // necessarily this item's own SKU — a presale order for size L and
+        // one for size XXL both resolve to the same key and draw from the
+        // same counter, per the campaign's shared 50-unit cap.
+        await decrementInventory(item.inventoryKey, item.quantity);
       }
     }
 
@@ -162,7 +176,18 @@ async function handler(req, res) {
     email: customerDetails.email || '',
     phone: customerDetails.phone || '',
     marketingConsent: readMarketingConsent(session),
-    items: items.map((i) => ({ name: i.name, qty: i.quantity, unitPriceCents: i.retailPriceCents, provider: i.provider })),
+    // sku/groupId/size are additive on top of the original shape (older
+    // stored records simply won't have them) — groupId/size are what
+    // api/admin/presale-tally.js sums by, once a presale campaign closes.
+    items: items.map((i) => ({
+      name: i.name,
+      qty: i.quantity,
+      unitPriceCents: i.retailPriceCents,
+      provider: i.provider,
+      sku: i.sku,
+      groupId: i.groupId,
+      size: i.size,
+    })),
     totalCents: session.amount_total,
     currency: session.currency,
   });
@@ -193,4 +218,5 @@ async function handler(req, res) {
 }
 
 handler.config = { api: { bodyParser: false } };
+handler.buildFulfillmentItems = buildFulfillmentItems; // exported for tests
 module.exports = handler;

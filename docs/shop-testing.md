@@ -25,9 +25,30 @@ standard vs. upgraded vs. free-shipping-overrides-both, plus a missing/
 absent stored weight falling back to 0oz instead of throwing
 (`tests/create-checkout-session.test.js`, mocked Stripe + variant index;
 `tests/products.test.js` separately covers `buildVariantIndexByStripePriceId`
-itself against a fake Redis client). No test in this suite ever places a
-live Apliiq order or calls a real API — see the Apliiq section below for
-why that matters.
+itself against a fake Redis client), and the presale campaign logic —
+`lib/presale.js`'s `computePresaleStatus` (claimed-count math, closing via
+unit cap vs. closing via deadline, tested independently as pure functions
+in `tests/presale.test.js`), `api/products.js`'s `attachPresaleStatus`
+(`tests/products.test.js`), and `api/create-checkout-session.js` rejecting
+a closed presale SKU server-side even when the Stripe Price itself is
+still perfectly valid (`tests/create-checkout-session.test.js`) — including
+the pooled-inventory case, where two different size variants (e.g. L and
+XXL) share one `inventoryKey` and both get checked against the identical
+shared remaining count (`tests/products.test.js`,
+`tests/create-checkout-session.test.js`,
+`tests/presale.test.js`). `tests/stripe-webhook.test.js` covers
+`buildFulfillmentItems` resolving `inventoryKey`/`groupId`/`size` off
+Stripe Product metadata, plus a direct proof — using the real
+`decrementInventory`, not a mock — that an L order and an XXL order
+decrement the exact same shared counter rather than two independent ones.
+`tests/activate-product.test.js` also covers `metadata.inventory_key` only
+getting set when a variant declares one. `tests/create-blu2-presale-tee.test.js`
+covers that script's variant-building/migration logic (5 pooled size
+variants; a stale single-SKU variant from the product's original,
+incorrect build is dropped rather than carried forward). `tests/presale-tally.test.js`
+covers the print-shop tally report's per-size summing. No test in
+this suite ever places a live Apliiq order or calls a real API — see the
+Apliiq section below for why that matters.
 
 ## Verifying self-fulfilled inventory + the oversold alert, for real
 
@@ -63,6 +84,38 @@ already has a `stripeProductId`, re-running with just `--activate`
 recreates nothing (useful if Apliiq later appends a new size/color: only
 the new SKU gets Stripe objects). Needs `STRIPE_SECRET_KEY` and real Redis
 credentials set.
+
+## Launching the BLU2 presale tee (`self`-fulfilled, Royal Tees Printing)
+
+```bash
+node scripts/set-inventory.js RT-BLU2-PRESALE 50     # only if you're re-seeding stock by hand
+PRESALE_PRICE_CENTS=4000 node scripts/create-blu2-presale-tee.js
+```
+
+`scripts/create-blu2-presale-tee.js` is the `self`-provider equivalent of
+Apliiq's Add to Store webhook — it writes the draft catalog entry (5 size
+variants, `RT-BLU2-PRESALE-S`/`-M`/`-L`/`-XL`/`-XXL`, each pointing its
+`inventoryKey` back at the one shared `RT-BLU2-PRESALE` counter — the
+50-unit hard cap is one pool across all sizes, not 50-per-size), seeds
+that shared counter to `PRESALE_CAP_UNITS` (default 50, only if unset —
+never clobbers an in-progress sell-through), then calls
+`scripts/activate-product.js`'s `activateProduct()` to create 5 real
+Stripe Product/Prices (one per size, same flat `PRESALE_PRICE_CENTS`) and
+flip the entry `active: true`. Safe to re-run.
+
+Also confirm `PRESALE_SHIP_ESTIMATE_COPY` (defaults to "Ships in 4-6
+weeks", `api/shop-config.js`) against Royal Tees' real quoted turnaround
+before launch.
+
+The presale closes — permanently, not a revert to retail — the moment
+either `PRESALE_CAP_UNITS` is hit or `presaleEndsAt` passes, whichever is
+first. This is enforced in `api/create-checkout-session.js`, not just
+hidden in `shop.html`: a closed presale's Stripe Price is still perfectly
+valid and purchasable as far as Stripe is concerned, so the closing check
+has to happen in application code on every checkout attempt, not once at
+"deactivation" time. See `lib/presale.js`'s `computePresaleStatus` for the
+shared closing logic used by both `api/products.js` (display) and
+`api/create-checkout-session.js` (enforcement).
 
 ## Product activation check
 

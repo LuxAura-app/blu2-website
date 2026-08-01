@@ -259,3 +259,193 @@ test('rejects an unknown price', async () => {
     assert.match(result.body.error, /Unknown price/);
   });
 });
+
+/* ────────────────────────────────────────────
+   PRESALE CLOSING — enforced here, not just hidden in shop.html. A closed
+   presale must be rejected even though the price itself is still a
+   perfectly valid, active Stripe Price (Stripe has no concept of "presale
+   closed" — that's purely this app's Redis-backed state).
+──────────────────────────────────────────── */
+const FAR_FUTURE = '2099-01-01T00:00:00Z';
+const FAR_PAST = '2000-01-01T00:00:00Z';
+
+function presaleVariant(overrides) {
+  return {
+    price_presale: {
+      sku: 'RT-BLU2-PRESALE',
+      isPresale: true,
+      presaleCapUnits: 50,
+      presaleEndsAt: FAR_FUTURE,
+      stripePriceId: 'price_presale',
+      ...overrides,
+    },
+  };
+}
+
+test('rejects checkout for a presale SKU whose inventory has hit the unit cap, even before the deadline', async () => {
+  await withEnv(SHIPPING_ENV, async () => {
+    const stripe = fakeStripe({ price_presale: priceObj(4000) });
+    const result = await handleCreateCheckoutSession(
+      { items: [{ priceId: 'price_presale', qty: 1 }] },
+      {
+        stripe,
+        buildVariantIndex: fakeVariantIndex(presaleVariant({})),
+        getInventory: async () => 0, // cap hit
+        siteUrl: 'https://example.com',
+      }
+    );
+    assert.equal(result.status, 400);
+    assert.match(result.body.error, /presale is closed/);
+    assert.equal(stripe.sessionsCreated.length, 0);
+  });
+});
+
+test('rejects checkout for a presale SKU past its deadline, even with units still remaining', async () => {
+  await withEnv(SHIPPING_ENV, async () => {
+    const stripe = fakeStripe({ price_presale: priceObj(4000) });
+    const result = await handleCreateCheckoutSession(
+      { items: [{ priceId: 'price_presale', qty: 1 }] },
+      {
+        stripe,
+        buildVariantIndex: fakeVariantIndex(presaleVariant({ presaleEndsAt: FAR_PAST })),
+        getInventory: async () => 40, // plenty of stock left
+        siteUrl: 'https://example.com',
+      }
+    );
+    assert.equal(result.status, 400);
+    assert.match(result.body.error, /presale is closed/);
+    assert.equal(stripe.sessionsCreated.length, 0);
+  });
+});
+
+test('allows checkout for a presale SKU that is still open (stock left, deadline in the future)', async () => {
+  await withEnv(SHIPPING_ENV, async () => {
+    const stripe = fakeStripe({ price_presale: priceObj(4000) });
+    const result = await handleCreateCheckoutSession(
+      { items: [{ priceId: 'price_presale', qty: 1 }] },
+      {
+        stripe,
+        buildVariantIndex: fakeVariantIndex(presaleVariant({})),
+        getInventory: async () => 12,
+        siteUrl: 'https://example.com',
+      }
+    );
+    assert.equal(result.status, 200);
+    assert.equal(stripe.sessionsCreated.length, 1);
+  });
+});
+
+test('a non-presale item is never checked against inventory/deadline at all', async () => {
+  await withEnv(SHIPPING_ENV, async () => {
+    const stripe = fakeStripe({ price_s: priceObj(4500) });
+    let inventoryChecked = false;
+    const result = await handleCreateCheckoutSession(
+      { items: [{ priceId: 'price_s', qty: 1 }] },
+      {
+        stripe,
+        buildVariantIndex: fakeVariantIndex(VARIANTS),
+        getInventory: async () => {
+          inventoryChecked = true;
+          return 0;
+        },
+        siteUrl: 'https://example.com',
+      }
+    );
+    assert.equal(result.status, 200);
+    assert.equal(inventoryChecked, false);
+  });
+});
+
+/* ────────────────────────────────────────────
+   SHARED POOL ACROSS SIZE VARIANTS — the presale tee's real shape (5
+   sizes, one 50-unit cap). Two distinct variants (different SKU,
+   different priceId) that share `inventoryKey` must be checked against
+   the identical remaining count, since that's the same Redis counter
+   `api/stripe-webhook.js` decrements for either one.
+──────────────────────────────────────────── */
+function pooledSizeVariants(overrides) {
+  const shared = { isPresale: true, presaleCapUnits: 50, presaleEndsAt: FAR_FUTURE, inventoryKey: 'RT-BLU2-PRESALE', ...overrides };
+  return {
+    price_presale_l: { ...shared, sku: 'RT-BLU2-PRESALE-L', stripePriceId: 'price_presale_l' },
+    price_presale_xxl: { ...shared, sku: 'RT-BLU2-PRESALE-XXL', stripePriceId: 'price_presale_xxl' },
+  };
+}
+
+test('an order for size L and an order for size XXL are both checked against the same shared inventory key, not their own SKUs', async () => {
+  await withEnv(SHIPPING_ENV, async () => {
+    const stripe = fakeStripe({ price_presale_l: priceObj(4000), price_presale_xxl: priceObj(4000) });
+    const seenKeys = [];
+    const getInventoryFn = async (key) => {
+      seenKeys.push(key);
+      return 10;
+    };
+
+    const lResult = await handleCreateCheckoutSession(
+      { items: [{ priceId: 'price_presale_l', qty: 1 }] },
+      { stripe, buildVariantIndex: fakeVariantIndex(pooledSizeVariants({})), getInventory: getInventoryFn, siteUrl: 'https://example.com' }
+    );
+    const xxlResult = await handleCreateCheckoutSession(
+      { items: [{ priceId: 'price_presale_xxl', qty: 1 }] },
+      { stripe, buildVariantIndex: fakeVariantIndex(pooledSizeVariants({})), getInventory: getInventoryFn, siteUrl: 'https://example.com' }
+    );
+
+    assert.equal(lResult.status, 200);
+    assert.equal(xxlResult.status, 200);
+    // Both requests looked up the exact same shared key — never
+    // 'RT-BLU2-PRESALE-L' or 'RT-BLU2-PRESALE-XXL' individually.
+    assert.deepEqual(seenKeys, ['RT-BLU2-PRESALE', 'RT-BLU2-PRESALE']);
+  });
+});
+
+test('a cart with both an L and an XXL of the same presale looks the shared pool up once, and rejects both if it is closed', async () => {
+  await withEnv(SHIPPING_ENV, async () => {
+    const stripe = fakeStripe({ price_presale_l: priceObj(4000), price_presale_xxl: priceObj(4000) });
+    let callCount = 0;
+    const result = await handleCreateCheckoutSession(
+      {
+        items: [
+          { priceId: 'price_presale_l', qty: 1 },
+          { priceId: 'price_presale_xxl', qty: 1 },
+        ],
+      },
+      {
+        stripe,
+        buildVariantIndex: fakeVariantIndex(pooledSizeVariants({})),
+        getInventory: async () => {
+          callCount += 1;
+          return 0; // shared pool exhausted
+        },
+        siteUrl: 'https://example.com',
+      }
+    );
+
+    assert.equal(result.status, 400);
+    assert.match(result.body.error, /presale is closed/);
+    assert.equal(stripe.sessionsCreated.length, 0);
+    // Deduped: one shared key, looked up once for the whole cart, not once per line item.
+    assert.equal(callCount, 1);
+  });
+});
+
+test('a cart with both an L and an XXL of the same presale is allowed through when the shared pool still has room', async () => {
+  await withEnv(SHIPPING_ENV, async () => {
+    const stripe = fakeStripe({ price_presale_l: priceObj(4000), price_presale_xxl: priceObj(4000) });
+    const result = await handleCreateCheckoutSession(
+      {
+        items: [
+          { priceId: 'price_presale_l', qty: 1 },
+          { priceId: 'price_presale_xxl', qty: 1 },
+        ],
+      },
+      {
+        stripe,
+        buildVariantIndex: fakeVariantIndex(pooledSizeVariants({})),
+        getInventory: async () => 2, // 2 left in the shared pool, enough for both lines' presence check
+        siteUrl: 'https://example.com',
+      }
+    );
+
+    assert.equal(result.status, 200);
+    assert.equal(stripe.sessionsCreated.length, 1);
+  });
+});

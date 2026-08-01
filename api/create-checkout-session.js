@@ -1,5 +1,7 @@
 const Stripe = require('stripe');
 const { buildVariantIndexByStripePriceId } = require('../lib/product-catalog');
+const { getInventory } = require('../lib/inventory');
+const { computePresaleStatus } = require('../lib/presale');
 
 /*
  * Marketing consent UI note: Stripe Checkout has no native checkbox custom
@@ -28,11 +30,13 @@ function badRequestResult(message) {
  * @param {Object} [deps] injectable for tests
  * @param {import('stripe')} [deps.stripe]
  * @param {typeof buildVariantIndexByStripePriceId} [deps.buildVariantIndex]
+ * @param {typeof getInventory} [deps.getInventory]
  * @param {string} [deps.siteUrl]
  */
 async function handleCreateCheckoutSession(body, deps = {}) {
   const stripe = deps.stripe || new Stripe(process.env.STRIPE_SECRET_KEY);
   const buildVariantIndex = deps.buildVariantIndex || buildVariantIndexByStripePriceId;
+  const getInventoryFn = deps.getInventory || getInventory;
 
   const { items } = body || {};
   if (!Array.isArray(items) || items.length === 0) {
@@ -69,6 +73,41 @@ async function handleCreateCheckoutSession(body, deps = {}) {
   // cart) contributes 0oz here rather than failing checkout; it's logged so
   // the gap is visible without blocking a paying customer.
   const variantIndex = await buildVariantIndex();
+
+  // Enforce presale closing here, not just in shop.html — a cached page, a
+  // stale tab left open past the deadline, or a hand-crafted request could
+  // all still send a closed presale's priceId. This is the one place that
+  // actually blocks the sale; api/products.js's isPresaleClosed is display
+  // only. Uses the exact same computePresaleStatus as api/products.js so
+  // the two can never disagree about what "closed" means.
+  //
+  // Looked up by variant.inventoryKey, not variant.sku — a multi-size
+  // presale (e.g. the tee's S/M/L/XL/XXL) pools every size under one
+  // shared counter, so a cart with two different sizes of the same
+  // presale must check both against the identical shared remaining count,
+  // not two independent per-size counts. remainingByKey caches the
+  // in-flight read so that shared lookup only hits Redis once per cart.
+  const remainingByKey = new Map();
+  for (const item of items) {
+    const variant = variantIndex.get(item.priceId);
+    if (!variant || !variant.isPresale) continue;
+
+    const key = variant.inventoryKey || variant.sku;
+    if (!remainingByKey.has(key)) {
+      remainingByKey.set(key, getInventoryFn(key));
+    }
+    const remaining = await remainingByKey.get(key);
+
+    const status = computePresaleStatus({
+      capUnits: variant.presaleCapUnits,
+      remaining,
+      endsAtIso: variant.presaleEndsAt,
+    });
+    if (status.isPresaleClosed) {
+      return badRequestResult(`This presale is closed: ${item.priceId}`);
+    }
+  }
+
   let totalWeightOz = 0;
   const missingWeightPriceIds = [];
   for (const item of items) {

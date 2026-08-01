@@ -115,6 +115,61 @@ crossfade partner. This is independent of the size-button selector — hover
 never changes which variant/`priceId` Add to Cart uses. Add future
 overrides directly in `shop.html`, not in the catalog data.
 
+## Presale campaigns
+
+A catalog entry can opt into presale behavior with four product-level
+fields on the Redis record (`lib/product-catalog.js`, passed through onto
+every flattened card): `isPresale` (bool), `presaleEndsAt` (ISO
+timestamp), `presaleGoal` (display-only soft target, not enforced
+anywhere), and `presaleCapUnits` (the real hard cap).
+
+### Pooled inventory across size variants
+
+The hard cap can be one shared pool across multiple size variants, not
+just a single SKU. Every variant carries an `inventoryKey`
+(`lib/product-catalog.js`) — which `inventory:{key}` counter
+(`lib/inventory.js`) its stock actually lives under. It defaults to the
+variant's own SKU (today's behavior for every ordinary product: one SKU,
+one independent pool), but a variant can instead set an explicit
+`inventoryKey` shared with its siblings. The presale tee's 5 sizes
+(`RT-BLU2-PRESALE-S`/`-M`/`-L`/`-XL`/`-XXL`) all set
+`inventoryKey: 'RT-BLU2-PRESALE'` — so an order for size L and an order
+for size XXL decrement the exact same counter, and the 50-unit cap is hit
+by the combined total across all sizes, not 50 per size.
+
+This key flows through the same places a SKU already did:
+`scripts/activate-product.js` writes it onto the Stripe Product as
+`metadata.inventory_key` (only when it differs from the SKU); `api/
+stripe-webhook.js`'s `buildFulfillmentItems` reads it back off that
+metadata and `submitProviderGroup` decrements `item.inventoryKey`, not
+`item.sku`; `api/products.js` and `api/create-checkout-session.js` both
+look remaining stock up by `inventoryKey` too (each dedupes concurrent
+same-key lookups within one request, so every sibling size card/cart line
+reads the identical shared count). The order record's `items[]` still
+keeps each item's own `sku`/`size`/`groupId` separately (see "Reporting"
+below) — pooling only ever affects which inventory counter gets
+decremented, never what gets recorded as sold.
+
+`lib/presale.js`'s `computePresaleStatus({ capUnits, remaining, endsAtIso })`
+is the one place "is this presale closed" gets decided — closed if the
+inventory counter has hit zero (the cap) **or** the current time is past
+`presaleEndsAt`, whichever comes first. Both `api/products.js` (to display
+remaining/claimed/`isPresaleClosed` on the storefront) and
+`api/create-checkout-session.js` (to actually block a sale) call this same
+function, so display and enforcement can't drift apart. Critically,
+closing is enforced in `create-checkout-session.js` itself — a closed
+presale's Stripe Price stays perfectly valid and purchasable from Stripe's
+own point of view, so `shop.html` hiding the Buy button is not, by itself,
+enough to stop a sale (a cached page, a stale open tab, or a hand-crafted
+request could still send the priceId).
+
+Once closed, a presale product does not revert to a normal retail listing
+— `active` stays `true` and the card keeps rendering (artwork included),
+just with the purchase UI replaced by closed-state copy. There is no
+un-close path in code; relaunching the same product as a second drop means
+a new catalog entry (see `scripts/create-blu2-presale-tee.js` for the
+launch pattern).
+
 ## Known v1 limitations
 
 - **Inventory tracking** (`lib/inventory.js`) is a simple counter

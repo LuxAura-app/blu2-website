@@ -55,6 +55,13 @@ async function createStripeVariant(stripe, product, variant, unitAmount, currenc
     metadata: {
       fulfillment_provider: product.provider || 'apliiq',
       provider_variant_id: variant.sku,
+      internal_product_id: product.internalProductId,
+      ...(variant.size ? { size: variant.size } : {}),
+      // Only set when a variant pools its stock with siblings under a
+      // different key than its own SKU (e.g. size variants sharing one
+      // presale cap) — api/stripe-webhook.js falls back to the SKU when
+      // this is absent, so ordinary single-SKU products are unaffected.
+      ...(variant.inventoryKey ? { inventory_key: variant.inventoryKey } : {}),
     },
   });
 

@@ -1,6 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { flattenProductToCards, buildVariantIndexByStripePriceId } = require('../lib/product-catalog');
+const productsHandler = require('../api/products');
 
 function fakeRedisClient(products) {
   return {
@@ -113,4 +114,135 @@ test('buildVariantIndexByStripePriceId omits variants with no stripePriceId rath
   const index = await buildVariantIndexByStripePriceId(client);
 
   assert.equal(index.size, 0);
+});
+
+const PRESALE_PRODUCT = {
+  internalProductId: 'self-blu2-presale-tee',
+  name: 'Better Left Unsaid 2 — Presale Tee',
+  description: 'presale copy',
+  active: true,
+  provider: 'self',
+  isPresale: true,
+  presaleEndsAt: '2026-08-31T23:59:59-04:00',
+  presaleGoal: 25,
+  presaleCapUnits: 50,
+  variants: [{ sku: 'RT-BLU2-PRESALE', stripePriceId: 'price_presale' }],
+};
+
+test('flattenProductToCards passes presale config fields through onto the card, false/null for ordinary products', () => {
+  const [presaleCard] = flattenProductToCards(PRESALE_PRODUCT);
+  assert.equal(presaleCard.isPresale, true);
+  assert.equal(presaleCard.presaleEndsAt, '2026-08-31T23:59:59-04:00');
+  assert.equal(presaleCard.presaleGoal, 25);
+  assert.equal(presaleCard.presaleCapUnits, 50);
+
+  const [ordinaryCard] = flattenProductToCards(MULTI_VARIANT_PRODUCT);
+  assert.equal(ordinaryCard.isPresale, false);
+  assert.equal(ordinaryCard.presaleEndsAt, null);
+});
+
+test('buildVariantIndexByStripePriceId merges the product-level presale fields onto each variant entry', async () => {
+  const client = fakeRedisClient([PRESALE_PRODUCT]);
+  const index = await buildVariantIndexByStripePriceId(client);
+  const variant = index.get('price_presale');
+  assert.equal(variant.isPresale, true);
+  assert.equal(variant.presaleCapUnits, 50);
+  assert.equal(variant.presaleEndsAt, '2026-08-31T23:59:59-04:00');
+});
+
+test("api/products.js's attachPresaleStatus fills in remaining/claimed/isPresaleClosed for presale cards only", async () => {
+  const cards = flattenProductToCards(PRESALE_PRODUCT).concat(flattenProductToCards(MULTI_VARIANT_PRODUCT));
+  const getInventoryFn = async (sku) => {
+    assert.equal(sku, 'RT-BLU2-PRESALE');
+    return 32;
+  };
+
+  await productsHandler.attachPresaleStatus(cards, getInventoryFn);
+
+  const presaleCard = cards.find((c) => c.groupId === 'self-blu2-presale-tee');
+  assert.equal(presaleCard.presaleRemaining, 32);
+  assert.equal(presaleCard.presaleClaimed, 18);
+  assert.equal(presaleCard.isPresaleClosed, false);
+
+  const ordinaryCard = cards.find((c) => c.groupId === 'apliiq-5989067');
+  assert.equal(ordinaryCard.isPresaleClosed, undefined);
+});
+
+test("attachPresaleStatus marks isPresaleClosed true once the inventory counter hits zero", async () => {
+  const cards = flattenProductToCards(PRESALE_PRODUCT);
+  await productsHandler.attachPresaleStatus(cards, async () => 0);
+  assert.equal(cards[0].isPresaleClosed, true);
+  assert.equal(cards[0].presaleClaimed, 50);
+});
+
+/**
+ * The real shape of the (corrected) presale tee: 5 size variants, each
+ * with its own SKU/priceId (so cart/checkout stay per-size), but all
+ * pointing `inventoryKey` at the same shared pool — see
+ * scripts/create-blu2-presale-tee.js and docs/shop-architecture.md's
+ * "Pooled inventory across size variants".
+ */
+const POOLED_PRESALE_PRODUCT = {
+  internalProductId: 'self-blu2-presale-tee',
+  name: 'Better Left Unsaid 2 — Presale Tee',
+  description: 'presale copy',
+  active: true,
+  provider: 'self',
+  isPresale: true,
+  presaleEndsAt: '2026-08-31T23:59:59-04:00',
+  presaleGoal: 25,
+  presaleCapUnits: 50,
+  variants: ['s', 'm', 'l', 'xl', 'xxl'].map((size) => ({
+    sku: `RT-BLU2-PRESALE-${size.toUpperCase()}`,
+    size,
+    stripePriceId: `price_presale_${size}`,
+    inventoryKey: 'RT-BLU2-PRESALE',
+  })),
+};
+
+test('flattenProductToCards defaults inventoryKey to the variant SKU when unset, and honors an explicit shared key', () => {
+  const [ordinaryCard] = flattenProductToCards(MULTI_VARIANT_PRODUCT);
+  assert.equal(ordinaryCard.inventoryKey, ordinaryCard.providerVariantId);
+
+  const pooledCards = flattenProductToCards(POOLED_PRESALE_PRODUCT);
+  assert.equal(pooledCards.length, 5);
+  assert.ok(pooledCards.every((c) => c.inventoryKey === 'RT-BLU2-PRESALE'));
+  // Each size still keeps its own distinct SKU/priceId — pooling only
+  // affects which inventory counter gets decremented.
+  assert.equal(new Set(pooledCards.map((c) => c.providerVariantId)).size, 5);
+  assert.equal(new Set(pooledCards.map((c) => c.priceId)).size, 5);
+});
+
+test('buildVariantIndexByStripePriceId carries the shared inventoryKey through onto every size variant', async () => {
+  const client = fakeRedisClient([POOLED_PRESALE_PRODUCT]);
+  const index = await buildVariantIndexByStripePriceId(client);
+  assert.equal(index.get('price_presale_l').inventoryKey, 'RT-BLU2-PRESALE');
+  assert.equal(index.get('price_presale_xxl').inventoryKey, 'RT-BLU2-PRESALE');
+  assert.equal(index.get('price_presale_l').sku, 'RT-BLU2-PRESALE-L');
+  assert.equal(index.get('price_presale_xxl').sku, 'RT-BLU2-PRESALE-XXL');
+});
+
+test('attachPresaleStatus reads the shared pool exactly once for 5 sibling size cards, not once per card', async () => {
+  const cards = flattenProductToCards(POOLED_PRESALE_PRODUCT);
+  let callCount = 0;
+  const getInventoryFn = async (key) => {
+    callCount += 1;
+    assert.equal(key, 'RT-BLU2-PRESALE'); // never called with a per-size SKU
+    return 15;
+  };
+
+  await productsHandler.attachPresaleStatus(cards, getInventoryFn);
+
+  assert.equal(callCount, 1);
+  // Every size card reports the identical shared claimed/remaining/closed
+  // status — never a per-size split.
+  assert.ok(cards.every((c) => c.presaleRemaining === 15));
+  assert.ok(cards.every((c) => c.presaleClaimed === 35));
+  assert.ok(cards.every((c) => c.isPresaleClosed === false));
+});
+
+test('attachPresaleStatus closes every size card together once the shared pool hits zero, regardless of size mix', async () => {
+  const cards = flattenProductToCards(POOLED_PRESALE_PRODUCT);
+  await productsHandler.attachPresaleStatus(cards, async () => 0);
+  assert.ok(cards.every((c) => c.isPresaleClosed === true));
 });
