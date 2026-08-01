@@ -137,6 +137,28 @@ reachable behind just a bearer token indefinitely. If you recreate it,
 rotate `ADMIN_REPORT_TOKEN` afterward too if its value was ever pasted
 anywhere outside a private terminal (e.g. into a chat session).
 
+## Changing a product's price after launch
+
+Stripe Prices are immutable — you can't edit `unit_amount` on an existing
+Price. `scripts/reprice-product.js` handles this: for every variant of one
+catalog product it creates a **new** Price under that variant's existing
+Stripe Product, points the Product's `default_price` at it, archives (sets
+`active: false` on) the old Price, and updates the catalog's stored
+`priceCents`/`stripePriceId`. It reuses the existing Stripe Product rather
+than recreating it (unlike `relink-stripe-live.js` above), so a Checkout
+Session already open against the old Price still completes normally.
+
+```bash
+STRIPE_SECRET_KEY=sk_live_... node scripts/reprice-product.js self-blu2-presale-tee --price=45.00 --dry-run
+STRIPE_SECRET_KEY=sk_live_... node scripts/reprice-product.js self-blu2-presale-tee --price=45.00
+```
+
+Same Sensitive-credentials caveat as Option A/B above applies — if
+`STRIPE_SECRET_KEY`/Redis REST credentials aren't available locally, wrap
+`repriceProduct` in a temporary `/api/admin/*` endpoint instead (see
+`api/admin/reprice-product.js` if present, or recreate it following the
+`relink-stripe-live` pattern) and **delete the route immediately after use**.
+
 ## Webhook registration
 
 1. Register an endpoint at `https://www.betterleftunsaid2.com/api/stripe-webhook`
