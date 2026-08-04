@@ -164,6 +164,7 @@ footer a:hover { color: var(--off-white); }
   <div class="policy-section">
     <div class="policy-section-title">Production time</div>
     <p id="production-time-note">Made to order — ships within 1 week. Standard shipping typically takes an additional 2-7 business days to arrive, for a total of about 1-2 weeks.</p>
+    <p id="presale-ship-note">Presale item: printed in one limited run once the presale window closes, so the turnaround is longer than our standard items — <span id="presale-ship-copy">Ships in 4-6 weeks</span>.</p>
   </div>
 
   <div class="policy-section">
@@ -191,6 +192,9 @@ footer a:hover { color: var(--off-white); }
     const data = await res.json();
     if (data.productionTimeCopy) {
       document.getElementById("production-time-note").textContent = data.productionTimeCopy;
+    }
+    if (data.presaleShipEstimateCopy) {
+      document.getElementById("presale-ship-copy").textContent = data.presaleShipEstimateCopy;
     }
     if (data.supportEmail) {
       document.getElementById("policy-contact-link").href = `mailto:${data.supportEmail}`;

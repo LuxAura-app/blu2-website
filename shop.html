@@ -226,6 +226,23 @@ nav {
   opacity: 0;
   z-index: 2;
 }
+.media-zoom-btn {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  z-index: 4;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5,5,5,0.55);
+  border: 1px solid var(--border);
+  color: var(--off-white);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.media-zoom-btn:hover { border-color: var(--orange); color: var(--orange); }
 @media (hover: hover) and (pointer: fine) {
   .product-card-inner:hover { border-color: #262626; }
   .product-card-inner:hover .product-media img,
@@ -501,6 +518,47 @@ nav {
 }
 .shop-policy a { color: var(--muted); text-decoration: underline; }
 .shop-policy a:hover { color: var(--off-white); }
+
+/* ── IMAGE LIGHTBOX ── */
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: rgba(5,5,5,0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.lightbox-overlay.open { opacity: 1; pointer-events: auto; }
+.lightbox-img {
+  width: min(620px, 90vw);
+  max-height: 82vh;
+  object-fit: contain;
+  border: 1px solid var(--border);
+  background: var(--panel);
+}
+.lightbox-close {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--off-white);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.lightbox-close:hover { border-color: var(--orange); color: var(--orange); }
 
 /* ── CART DRAWER ── */
 .cart-overlay {
@@ -807,6 +865,12 @@ footer a:hover { color: var(--off-white); }
   </div>
 </div>
 
+<!-- IMAGE LIGHTBOX -->
+<div id="image-lightbox" class="lightbox-overlay" role="dialog" aria-modal="true" aria-label="Product image" onclick="if (event.target === this) closeLightbox();">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="Close image">&times;</button>
+  <img id="lightbox-img" class="lightbox-img" src="" alt=""/>
+</div>
+
 <script>
 /* ────────────────────────────────────────────
    PRODUCT DATA
@@ -1033,6 +1097,7 @@ function buildProductCard(group, index) {
   card.style.transitionDelay = (index * 90) + "ms";
 
   let selectedId = group.defaultVariantId;
+  let activeImageIndex = 0;
   const priceLabel = group.uniform
     ? formatPrice(group.minPriceCents)
     : `${formatPrice(group.minPriceCents)}–${formatPrice(group.maxPriceCents)}`;
@@ -1115,6 +1180,9 @@ function buildProductCard(group, index) {
           <div class="placeholder-mark">BLU2 · 2026</div>
         </div>
         ${badgeText ? `<div class="product-badge">${badgeText}</div>` : ""}
+        <button type="button" class="media-zoom-btn" aria-label="Zoom product image">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
       </div>
       ${
         hasBack
@@ -1155,7 +1223,19 @@ function buildProductCard(group, index) {
         const showBack = btn.getAttribute("data-view") === "back";
         media.classList.toggle("show-back", showBack);
         card.querySelectorAll("[data-view]").forEach((b) => b.classList.toggle("selected", b === btn));
+        activeImageIndex = showBack ? 1 : 0;
       });
+    });
+  }
+
+  const zoomBtn = card.querySelector(".media-zoom-btn");
+  if (zoomBtn) {
+    zoomBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const activeImage = images[activeImageIndex] || images[0];
+      if (activeImage && activeImage.src) {
+        openLightbox(activeImage.src, `${group.name}${activeImage.label ? " — " + activeImage.label : ""}`);
+      }
     });
   }
 
@@ -1188,6 +1268,29 @@ function buildProductCard(group, index) {
   }
 
   return card;
+}
+
+/* ────────────────────────────────────────────
+   IMAGE LIGHTBOX
+   Click-to-zoom on the product card gallery — shows whichever image is
+   currently active on the card (front/back), at a moderately larger size.
+   Closes on click-outside, the X button, or Escape.
+──────────────────────────────────────────── */
+function openLightbox(src, alt) {
+  const overlay = document.getElementById("image-lightbox");
+  const img = document.getElementById("lightbox-img");
+  img.src = src;
+  img.alt = alt || "";
+  overlay.classList.add("open");
+  document.addEventListener("keydown", onLightboxKeydown);
+}
+function closeLightbox() {
+  const overlay = document.getElementById("image-lightbox");
+  overlay.classList.remove("open");
+  document.removeEventListener("keydown", onLightboxKeydown);
+}
+function onLightboxKeydown(e) {
+  if (e.key === "Escape") closeLightbox();
 }
 
 /* ────────────────────────────────────────────
