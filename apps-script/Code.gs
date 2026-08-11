@@ -89,6 +89,10 @@ function doGet(e) {
     return jsonOut({ rsvps: getAllRsvps() });
   }
 
+  if (e.parameter.type === "contacts") {
+    return jsonOut({ contacts: getAllContacts() });
+  }
+
   const sheet = getSheet();
   const data  = sheet.getDataRange().getValues();
   if (data.length < 2) return jsonOut({ responses: [] });
@@ -159,6 +163,27 @@ function upsertContact(user, source) {
   }
 
   sheet.appendRow([user.first, user.last, user.email, user.phone, now, now, source]);
+}
+
+/**
+ * Returns every row of the Contacts tab (the deduped marketing list built
+ * up by logins, votes, and RSVPs), shaped for the admin `?type=contacts`
+ * export. One row per person; columns match the sheet header.
+ */
+function getAllContacts() {
+  const sheet = getContactsSheet();
+  const data  = sheet.getDataRange().getValues();
+  if (data.length < 2) return [];
+
+  const header = data[0];
+  return data.slice(1).map(row => {
+    const obj = {};
+    header.forEach((h, i) => obj[h] = row[i]);
+    return {
+      first: obj.First, last: obj.Last, email: obj.Email, phone: obj.Phone,
+      firstSeen: obj["First Seen"], lastSeen: obj["Last Seen"], source: obj.Source
+    };
+  });
 }
 
 function appendRow(entry) {

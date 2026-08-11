@@ -193,6 +193,10 @@ honest critiques, with a soft CTA to the mixtape (out July 1). Reuses
 - **Contacts tab**: one row per person, keyed by email (case-insensitive).
   Columns are `First, Last, Email, Phone, First Seen, Last Seen, Source`.
   Repeat logins/submissions update the same row instead of duplicating it.
+- **Admin export — Contacts**: `GET {SHEET_WEBHOOK_URL}?pass=<ADMIN_PASS>&type=contacts`
+  returns every Contacts row as JSON (`getAllContacts()` in `Code.gs`), for
+  pulling the full marketing list (RSVPs + logins + votes) outside the
+  Sheet UI. No admin-dashboard button for this yet — curl/fetch it directly.
 - **Admin → Sync All Votes (Cloud)**: fetches every row from the Sheet
   (authenticated with `ADMIN_PASS`) and merges it into the admin dashboard,
   so **Export CSV** then produces one combined document of every vote ever
