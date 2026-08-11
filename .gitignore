@@ -20,3 +20,8 @@ BLU2/
 
 # Admin data pulls (real subscriber PII — local only, never committed)
 admin-exports/
+
+# Raw newsletter source drop (contains a recipient roster xlsx with real
+# names/emails/phones — local only; the deployed setup lives in
+# apps-script/blu2-newsletter/ instead)
+apps-script/BLU2 Streaming Release Newsletter/
