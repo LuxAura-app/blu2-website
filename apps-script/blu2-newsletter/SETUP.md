@@ -1,76 +1,99 @@
 # BLU2 Newsletter Mail Merge — Setup
 
-Deployed via `clasp`, authenticated as **titledtentatively@gmail.com** (the account
-that owns the recipient Sheet and Drive asset folder this script reads from).
+Deployed via `clasp`, authenticated as **titledtentatively@gmail.com**.
 
 - Script project: https://script.google.com/d/18RnyGLSDvNphyhn_Sstagr3GDmgRMH0R1kIrk-h0X6suOtzurN55Bjyw/edit
-- Deployment ID: `AKfycbxDQxktM3Yd6IOEQY-aqFRk-_wAYhAykCFgKpR_JzA8TK895yVnCHk5Q9nET-E7T0vq`
-- Web app URL (`UNSUBSCRIBE_WEBAPP_URL` in `Code.gs`):
-  `https://script.google.com/macros/s/AKfycbxDQxktM3Yd6IOEQY-aqFRk-_wAYhAykCFgKpR_JzA8TK895yVnCHk5Q9nET-E7T0vq/exec`
 - Recipient Sheet: `1tkB8RD0g12uBUuM1Wezbb_vuCWIUn1coBMc2UlDk49U` ("BLU2 Newsletter
   Recipients", 112 people, `Unsubscribed`/`Unsubscribed At` columns)
-- Drive image folder: `1mQeNjGr-_NrZrX0jDHo6vXiiQDbB04tt` ("BLU2 Newsletter Assets")
 
-## Two manual steps still needed before a real send
+## Sends via Resend Broadcasts, not GmailApp
 
-1. **Upload images to the Drive folder.** `assets/` in this folder has 4 of the 5
-   required images, recovered directly from the base64 data embedded in the
-   `BLU2_Newsletter_*_*.html` preview files (no image zip was actually present
-   alongside the script when this was set up):
-   - `email_rose.jpg`, `email_wordmark.png`, `email_reel_thumb.jpg`, `email_studio.jpg` ✅ recovered
-   - `email_embers.jpg` ❌ **not recoverable from anything in this repo** — it's
-     defined in `getInlineImages_()` but never actually referenced by `cid:` in
-     any of the 3 email bodies. Even though it's unused visually, `getInlineImages_()`
-     still fetches it up front for every send, so a send will fail immediately with
-     `Missing image in BLU2 Newsletter Assets: email_embers.jpg` unless *some* file
-     by that exact name exists in the Drive folder. Source it separately and upload it
-     (any placeholder image works if it's truly unused — but confirm that against the
-     3 HTML templates before assuming it's safe to fake).
-   Drag all 5 into: https://drive.google.com/drive/folders/1mQeNjGr-_NrZrX0jDHo6vXiiQDbB04tt
+The original build used `GmailApp.sendEmail()` in a per-recipient loop, with images
+attached inline via `cid:`. That hit Gmail's ~100/day personal-account send quota
+partway through the first real send (Aug 11 countdown email: 95/112 delivered, 17
+failed with `Service invoked too many times for one day: email`). Resend Broadcasts
+have no daily send-count ceiling on the free tier — only a 1,000-contact segment cap,
+comfortably above this list's 112 — so a full send always goes out in one shot.
 
-2. **Fix web app access in the Apps Script UI.** The manifest (`appsscript.json`)
-   correctly declares `"access": "ANYONE_ANONYMOUS"`, but `clasp`/the Apps Script
-   API does not reliably apply anonymous web-app access to deployments it creates —
-   this is a known API limitation, confirmed here by testing (the deployed `/exec`
-   URL currently returns a Google "You need access" / sign-in page instead of the
-   `doGet` response, verified against the working BLU2 Vote Sync deployment as a
-   sanity check). To fix: open the script project above → **Deploy → Manage
-   deployments** → edit the existing deployment → confirm **Who has access: Anyone**
-   → **Deploy** (redeploying the *same* deployment ID keeps the URL, which is
-   already correctly patched into `Code.gs`). Re-test with a logged-out browser or
-   `curl` afterward — a working response is the `doGet` HTML confirmation page, not
-   a Google sign-in redirect.
+**Broadcasts don't support `cid:` inline attachments** (only Resend's transactional
+`/emails` endpoint does), so every image is referenced by public HTTPS URL instead:
 
-## Verification done so far (no real sends triggered)
+```
+https://www.betterleftunsaid2.com/img/newsletter/email_rose.jpg
+https://www.betterleftunsaid2.com/img/newsletter/email_wordmark.png
+https://www.betterleftunsaid2.com/img/newsletter/email_studio.jpg
+https://www.betterleftunsaid2.com/img/newsletter/email_reel_thumb.jpg
+```
+
+These are committed to the main site repo (`img/newsletter/`) and live in production.
+`email_embers.jpg` (never referenced by any of the 3 templates) was already dropped
+from the code entirely — nothing to source for it.
+
+## One-time setup remaining: RESEND_API_KEY
+
+Not yet set — I can't set this myself, it's a secret. In the script project above:
+**Project Settings → Script Properties → Add script property** → name
+`RESEND_API_KEY`, value = the same Resend API key used by the BLU2 Vote Sync
+project's newsletter sends (same account, same verified sender
+`party@betterleftunsaid2.com`). Nothing else needs configuring — `getOrCreateResendSegment_()`
+creates the `BLU2 Newsletter` and `BLU2 Newsletter — Test` segments automatically on
+first use and caches their IDs in Script Properties too.
+
+## Verification done so far (no real Resend sends triggered)
 
 - `node --check` on `Code.gs`: no syntax errors.
-- All 5 expected functions present: `sendCountdownEmail`, `sendReleaseDayEmail`,
+- Confirmed no stray `cid:`/`%%UNSUB_URL%%` remain in any of the 4 email bodies;
+  each has the correct image URL count (countdown 2, release day 2, day after 3,
+  test 2) and the `{{{RESEND_UNSUBSCRIBE_URL}}}` token.
+- All 5 functions present: `sendCountdownEmail`, `sendReleaseDayEmail`,
   `sendDayAfterEmail`, `sendTestToMe`, `doGet`.
-- `clasp run sendTestToMe` was **not** possible — this account doesn't have the
-  Apps Script API execution mode enabled for this project (`Script function not
-  found. Please make sure script is deployed as API executable.`). To enable
-  CLI-triggered test runs in the future: script.google.com → user settings →
-  turn on the Apps Script API, then add an `executionApi` entry to
-  `appsscript.json` and redeploy.
-- `sendTestToMe` itself has **not** been run yet (needs a human to open the editor
-  and click Run, or the Apps Script API step above) — do that after fixing the two
-  manual steps, before any real send.
+- `sendTestToMe` itself has **not** been run yet — needs `RESEND_API_KEY` set first,
+  then a human to click Run (scopes changed since the last authorization — Gmail/Drive
+  access dropped, `script.external_request` added — so expect a fresh authorization
+  prompt on first run).
+
+## Legacy unsubscribe web app — do not remove
+
+`doGet()` and its deployed Web App URL are the **original** GmailApp-era unsubscribe
+mechanism:
+
+- Deployment ID: `AKfycbxDQxktM3Yd6IOEQY-aqFRk-_wAYhAykCFgKpR_JzA8TK895yVnCHk5Q9nET-E7T0vq`
+- URL: `https://script.google.com/macros/s/AKfycbxDQxktM3Yd6IOEQY-aqFRk-_wAYhAykCFgKpR_JzA8TK895yVnCHk5Q9nET-E7T0vq/exec`
+
+Kept fully intact because the Aug 11 countdown email already went out to 95 real
+people with **that** link embedded — it must keep working indefinitely so anyone who
+got that specific email can still opt out. New sends (via Resend Broadcasts) use
+Resend's own `{{{RESEND_UNSUBSCRIBE_URL}}}` token instead — a completely separate
+mechanism where the unsubscribe is recorded on the Resend contact record, not written
+back to this Sheet. `syncContactsToResendSegment_()` re-pushes this Sheet's
+`Unsubscribed` column into Resend on every send, so anyone who opted out the old way
+stays suppressed going forward.
 
 ## Send-day flow
 
 1. Open the script project (link above).
 2. Pick `sendCountdownEmail` / `sendReleaseDayEmail` / `sendDayAfterEmail` from the
    function dropdown next to **Run**.
-3. Click **Run**. First run prompts for Gmail/Drive/Sheets authorization — expected.
+3. Click **Run**. First run (after the scope change) prompts for re-authorization —
+   expected. Each run syncs all 112 recipients into the `BLU2 Newsletter` Resend
+   segment (idempotent — safe to re-run, never creates duplicates), then sends one
+   Broadcast to it.
+
+`sendCountdownEmail` is wired up for consistency but not intended to run again for
+this campaign — it already partially sent via the old Gmail mechanism (see git
+history), and re-running it now would re-send "1 Day Left" to everyone, including
+those who already got it, likely on or after release day itself.
 
 ## Redeploying after code changes
 
 ```sh
 cd apps-script/blu2-newsletter
 clasp push --force   # --force needed non-interactively; confirms the manifest overwrite prompt
-clasp version "Describe the change"
-clasp deploy --deploymentId AKfycbxDQxktM3Yd6IOEQY-aqFRk-_wAYhAykCFgKpR_JzA8TK895yVnCHk5Q9nET-E7T0vq -V <version> -d "Description"
 ```
+
+No redeploy needed for the legacy web app (`doGet()`'s logic hasn't changed) — `clasp
+push` alone is enough, since the editor's **Run** button always executes the latest
+pushed code directly, not a pinned deployment version.
 
 `clasp create`/`clasp push` must **not** be run from inside `apps-script/` itself —
 clasp walks up to the parent directory and finds the *other* project's
