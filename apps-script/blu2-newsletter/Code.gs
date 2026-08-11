@@ -9,9 +9,9 @@
  * 1. script.google.com > New project > paste this whole file in, replacing
  *    Code.gs. (Or add it as a new file inside the existing "BLU2 Vote Sync"
  *    Apps Script project on this Drive account.)
- * 2. Upload the 5 images (delivered alongside this script, in the zip) into
+ * 2. Upload the 4 images (delivered alongside this script) into
  *    the Drive folder "BLU2 Newsletter Assets" — already created:
- *      email_rose.jpg   email_wordmark.png   email_embers.jpg
+ *      email_rose.jpg   email_wordmark.png
  *      email_studio.jpg   email_reel_thumb.jpg
  * 3. Deploy the unsubscribe endpoint: in the Apps Script editor, click
  *    Deploy > New deployment > select type "Web app" > Execute as: Me >
@@ -69,7 +69,6 @@ function getInlineImages_() {
   return {
     img_rose: blobFor('email_rose.jpg'),
     img_wordmark: blobFor('email_wordmark.png'),
-    img_embers: blobFor('email_embers.jpg'),
     img_studio: blobFor('email_studio.jpg'),
     img_reel: blobFor('email_reel_thumb.jpg')
   };
