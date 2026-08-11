@@ -17,3 +17,6 @@ BLU2/
 
 .vercel
 .env*
+
+# Admin data pulls (real subscriber PII — local only, never committed)
+admin-exports/
