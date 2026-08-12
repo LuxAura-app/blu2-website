@@ -75,8 +75,41 @@ radio@illanoize.co          (may be genuine as-is — WHPK's Illanoize show)
 
 4 addresses appear on both lists (`hiphop@wvkr.org`, `info@wrir.org`,
 `music@kure885.org`, `wqhsradio@gmail.com`) — they'll get both campaign
-emails since the two lists/segments are intentionally separate. Not
-deduped across lists since the two emails have different content/asks.
+emails since the two Sheets are intentionally kept separate (different
+content/asks, not deduped against each other).
+
+Note: both sends share a single Resend segment, **BLU2 Outreach**, rather
+than getting one each — the Resend account's plan caps segments at 3, and
+`BLU2 Newsletter` + `BLU2 Newsletter — Test` already use 2 of them.
+`sendSheetBroadcast_` in `Code.gs` re-syncs the shared segment's membership
+to exactly the current Sheet immediately before every send (removing
+leftovers from the other list's previous send), so recipients still only
+get the campaign that's actually for them.
+
+## Send history
+
+Both lists went out for real on 2026-08-12:
+
+- **College Radio** (`sendCollegeRadioAnnounceEmail`, broadcast
+  `c87f802b-27fc-4688-929b-b81e479621d9`) — delivered to 172/173.
+  `wwsp.music.director.@uwsp.edu` bounced at Resend contact-sync time
+  (422, invalid — stray trailing dot before the `@`, present in the
+  source PDF, not introduced by extraction). Fixed in the Sheet to
+  `wwsp.music.director@uwsp.edu` afterward via a one-time Apps Script
+  function (`fixWwspEmailTypo_ONETIME`, since removed from `Code.gs`) —
+  it'll be included in any future send to this list, but did not
+  receive the 2026-08-12 announcement.
+- **AFD DJ List** (`sendDJListAnnounceEmail`, broadcast
+  `809b0f56-108e-4c85-a729-0b8b0a940a0a`) — delivered to 107/107. The
+  shared-segment cleanup removed exactly 168 leftover members from the
+  College Radio send immediately before this one (172 synced minus the
+  4 addresses on both lists), confirming no cross-contamination between
+  the two campaigns.
+
+Both are one-shot campaign functions — re-running either will re-send to
+the full list again. Next real signal on list quality will be Resend's
+bounce/open data over the following days; recommend pruning hard bounces
+from the Sheets once that's in.
 
 ## Growing these lists further
 

@@ -62,18 +62,24 @@ var RESEND_SEGMENT_PROP_KEY = 'RESEND_NEWSLETTER_SEGMENT_ID';
 var RESEND_TEST_SEGMENT_NAME = 'BLU2 Newsletter \u2014 Test';
 var RESEND_TEST_SEGMENT_PROP_KEY = 'RESEND_NEWSLETTER_TEST_SEGMENT_ID';
 
-// College radio + AFD DJ outreach lists \u2014 separate Sheets/segments from the
-// main fan newsletter above, built from the College Radio Playbook PDF and
-// the "AFD DJ List to reach out to" doc. See recipients/README.md for how
+// College radio + AFD DJ outreach lists \u2014 separate Sheets from the main fan
+// newsletter above, built from the College Radio Playbook PDF and the
+// "AFD DJ List to reach out to" doc. See recipients/README.md for how
 // these were cleaned (syntax + dedupe only \u2014 no deliverability verification
 // has been run against either list yet).
+//
+// Both share ONE Resend segment (OUTREACH_SEGMENT_NAME below) rather than
+// getting one each \u2014 this account's plan caps segments at 3, and
+// BLU2 Newsletter + BLU2 Newsletter \u2014 Test already use 2 of them. See
+// sendSheetBroadcast_: before every send it syncs the current sheet's
+// contacts into the shared segment AND removes any member left over from
+// the other list's previous send, so each broadcast only reaches its own
+// list despite the shared segment slot.
 var COLLEGE_RADIO_SHEET_ID = '1lY7HpXwY-9NtszIY0NEVCXn-qz58Kmdnuvx8fBrjLLY';
-var COLLEGE_RADIO_SEGMENT_NAME = 'BLU2 College Radio';
-var COLLEGE_RADIO_SEGMENT_PROP_KEY = 'RESEND_COLLEGE_RADIO_SEGMENT_ID';
-
 var AFD_DJ_SHEET_ID = '1gvjNd_1p9hgmKq6S9iRux9X0zhNwMRcqHC8KyLxU4YE';
-var AFD_DJ_SEGMENT_NAME = 'BLU2 AFD DJ List';
-var AFD_DJ_SEGMENT_PROP_KEY = 'RESEND_AFD_DJ_SEGMENT_ID';
+
+var OUTREACH_SEGMENT_NAME = 'BLU2 Outreach';
+var OUTREACH_SEGMENT_PROP_KEY = 'RESEND_OUTREACH_SEGMENT_ID';
 
 function getSheet_() {
   return SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
@@ -112,6 +118,33 @@ function getAllRecipientRows_() {
 function unsubscribeUrlFor_(email) {
   return UNSUBSCRIBE_WEBAPP_URL + '?email=' + encodeURIComponent(email);
 }
+
+/**
+ * Read-only diagnostic — lists every Resend segment on this account (name,
+ * id, created date) via Logger.log. Added to debug the "Your plan includes
+ * 3 segments" error from sendCollegeRadioAnnounceEmail(): this account is
+ * shared with the BLU2 Vote Sync project, so the 3 slots may already be
+ * spoken for by segments this project didn't create. Run this from the
+ * dropdown, then View > Logs (or Ctrl+Enter) to see the output. Makes no
+ * changes to the account.
+ */
+function listResendSegments() {
+  var apiKey = getResendApiKey_();
+  var res = UrlFetchApp.fetch('https://api.resend.com/segments', {
+    method: 'get',
+    headers: { Authorization: 'Bearer ' + apiKey },
+    muteHttpExceptions: true
+  });
+  Logger.log(res.getResponseCode() + ' ' + res.getContentText());
+}
+
+// Two one-time cleanup functions ran and were removed here on 2026-08-12:
+// deleteGeneralResendSegment_ONETIME() (freed a Resend segment slot from
+// the unused "General" segment) and fixWwspEmailTypo_ONETIME() (corrected
+// a stray trailing dot in wwsp.music.director@uwsp.edu in the College
+// Radio Sheet). See recipients/README.md's "Send history" section for
+// what each one did and the resulting broadcast ids — git history has
+// the code if either is ever needed as a reference again.
 
 /**
  * Same shape as getAllRecipientRows_, but for the College Radio / AFD DJ
@@ -281,14 +314,71 @@ function sendNewsletterBroadcast_(subject, html) {
 }
 
 /**
- * Same as sendNewsletterBroadcast_ but for an arbitrary recipient Sheet +
- * segment — shared by the College Radio and AFD DJ sends below.
+ * Every email currently a member of the given segment (paginated, 100 at a
+ * time — Resend's max page size). Used by sendSheetBroadcast_ to find
+ * stale members left over from a different list's previous send to the
+ * same shared segment.
+ */
+function listSegmentContacts_(apiKey, segmentId) {
+  var out = [];
+  var after = null;
+  while (true) {
+    var url = 'https://api.resend.com/segments/' + segmentId + '/contacts?limit=100' + (after ? '&after=' + encodeURIComponent(after) : '');
+    var res = UrlFetchApp.fetch(url, { method: 'get', headers: { Authorization: 'Bearer ' + apiKey }, muteHttpExceptions: true });
+    if (res.getResponseCode() >= 300) {
+      throw new Error('Failed to list segment contacts: ' + res.getContentText());
+    }
+    var body = JSON.parse(res.getContentText());
+    var data = body.data || [];
+    data.forEach(function(c) { out.push(c); });
+    if (!body.has_more || data.length === 0) break;
+    after = data[data.length - 1].id;
+  }
+  return out;
+}
+
+/**
+ * Removes every current segment member whose email isn't in keepEmails —
+ * i.e. anyone left in the shared segment from a different list's previous
+ * send. Must run AFTER syncContactsToResendSegment_ has added the current
+ * list, so the diff only catches genuine leftovers.
+ */
+function removeStaleSegmentMembers_(apiKey, segmentId, keepEmails) {
+  var keep = {};
+  keepEmails.forEach(function(e) { keep[e.toLowerCase()] = true; });
+
+  var members = listSegmentContacts_(apiKey, segmentId);
+  var removed = 0, failed = [];
+  members.forEach(function(m) {
+    var email = String(m.email || '').toLowerCase();
+    if (keep[email]) return;
+    var res = UrlFetchApp.fetch(
+      'https://api.resend.com/contacts/' + encodeURIComponent(m.email) + '/segments/' + segmentId,
+      { method: 'delete', headers: { Authorization: 'Bearer ' + apiKey }, muteHttpExceptions: true }
+    );
+    if (res.getResponseCode() < 300) {
+      removed++;
+    } else {
+      failed.push(m.email + ': ' + res.getResponseCode() + ' ' + res.getContentText());
+    }
+  });
+  Logger.log('Removed ' + removed + ' stale segment member(s) not on the current list.');
+  if (failed.length) Logger.log('Removal failures:\n' + failed.join('\n'));
+}
+
+/**
+ * Same as sendNewsletterBroadcast_ but for an arbitrary recipient Sheet,
+ * sharing the single OUTREACH_SEGMENT_NAME segment — used by the College
+ * Radio and AFD DJ sends below. Cleans stale membership from the other
+ * list's previous send before sending, so the shared segment never
+ * cross-contaminates the two campaigns.
  */
 function sendSheetBroadcast_(sheetId, segmentPropKey, segmentName, subject, html) {
   var apiKey = getResendApiKey_();
   var segmentId = getOrCreateResendSegment_(apiKey, segmentPropKey, segmentName);
   var recipients = getRecipientRowsFromSheetId_(sheetId);
   syncContactsToResendSegment_(apiKey, segmentId, recipients);
+  removeStaleSegmentMembers_(apiKey, segmentId, recipients.map(function(r) { return r.email; }));
   Utilities.sleep(2000); // give segment membership a moment to propagate before sending
   return sendResendBroadcast_(apiKey, segmentId, subject, html);
 }
@@ -335,8 +425,8 @@ function sendDayAfterEmail() {
 function sendCollegeRadioAnnounceEmail() {
   sendSheetBroadcast_(
     COLLEGE_RADIO_SHEET_ID,
-    COLLEGE_RADIO_SEGMENT_PROP_KEY,
-    COLLEGE_RADIO_SEGMENT_NAME,
+    OUTREACH_SEGMENT_PROP_KEY,
+    OUTREACH_SEGMENT_NAME,
     "For Your Rotation — Mali V, Better Left Unsaid 2 (Out Now)",
     "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Better Left Unsaid 2</title></head>\n<body style=\"margin:0;padding:0;background-color:#0a0806;font-family:Georgia,'Times New Roman',serif;\">\n<div style=\"display:none;max-height:0;overflow:hidden;opacity:0;\">Two feature tracks for your format, streaming now — plus the full album.</div>\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color:#0a0806;\">\n<tr><td align=\"center\" style=\"padding:32px 16px;\">\n<table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;width:100%;background-color:#120d0a;border:1px solid #2a1e16;\">\n\n<tr><td align=\"center\" style=\"padding:26px 20px 6px;font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:4px;color:#f2994a;text-transform:uppercase;\">College Radio Submission &nbsp;/&nbsp; Mali V</td></tr>\n<tr><td align=\"center\" style=\"padding:6px 20px 10px;\"><img src=\"https://www.betterleftunsaid2.com/img/newsletter/email_wordmark.png\" width=\"260\" alt=\"Mali V - Better Left Unsaid 2\" style=\"display:block;width:260px;max-width:68%;height:auto;\"></td></tr>\n<tr><td align=\"center\" style=\"padding:8px 20px 4px;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;letter-spacing:2px;color:#f2994a;text-transform:uppercase;\">Out Now, For Your Format</td></tr>\n<tr><td align=\"center\" style=\"padding:0 30px 10px;font-family:Georgia,serif;font-size:14px;line-height:22px;color:#f4ede1;\">Mali V's new album, <strong>Better Left Unsaid 2</strong>, is streaming everywhere today. We're submitting two tracks from it for your consideration in regular rotation:</td></tr>\n<tr><td style=\"padding:6px 30px 4px;\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border:1px solid #2a1e16;background-color:#170f0a;\">\n<tr><td style=\"padding:14px 18px;font-family:Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:2px;color:#f2994a;text-transform:uppercase;border-bottom:1px solid #2a1e16;white-space:nowrap;\">Track 1</td><td align=\"right\" style=\"padding:14px 18px;font-family:Georgia,serif;font-size:14px;color:#f4ede1;border-bottom:1px solid #2a1e16;\">Better Left Unsaid</td></tr>\n<tr><td style=\"padding:14px 18px;font-family:Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:2px;color:#f2994a;text-transform:uppercase;white-space:nowrap;\">Track 2</td><td align=\"right\" style=\"padding:14px 18px;font-family:Georgia,serif;font-size:14px;color:#f4ede1;\">Ecstacy - Ex-To-See</td></tr>\n</table>\n</td></tr>\n<tr><td align=\"center\" style=\"padding:18px 24px 4px;\">\n<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\"><tr><td align=\"center\" style=\"background-color:#d9642c;background-image:linear-gradient(135deg,#d9642c,#f2994a);border-radius:3px;\">\n<a href=\"https://distrokid.com/hyperfollow/maliv1/blu-2-2\" target=\"_blank\" style=\"display:inline-block;padding:15px 38px;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;letter-spacing:2px;color:#0a0806;text-decoration:none;text-transform:uppercase;\">Stream The Full Album</a>\n</td></tr></table></td></tr>\n<tr><td align=\"center\" style=\"padding:6px 20px 4px;font-family:Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:1px;\"><a href=\"https://distrokid.com/hyperfollow/maliv1/blu-2-2\" style=\"color:#a89a86;\">distrokid.com/hyperfollow/maliv1/blu-2-2</a></td></tr>\n<tr><td align=\"center\" style=\"padding:18px 30px 4px;font-family:Georgia,serif;font-size:14px;line-height:22px;color:#f4ede1;\">For the full story behind the record, high-res art, and more from Mali V, visit <a href=\"https://www.betterleftunsaid2.com\" style=\"color:#f2994a;\">BetterLeftUnsaid2.com</a>.</td></tr>\n<tr><td align=\"center\" style=\"padding:16px 30px 6px;\"><img src=\"https://www.betterleftunsaid2.com/img/newsletter/email_rose.jpg\" width=\"140\" alt=\"Better Left Unsaid 2\" style=\"display:block;width:140px;max-width:38%;height:auto;border:1px solid #3a281c;margin:0 auto;\"></td></tr>\n<tr><td align=\"center\" style=\"padding:12px 30px 4px;font-family:Georgia,serif;font-style:italic;font-size:13px;line-height:21px;color:#f4ede1;\">&ldquo;Some things better left unsaid are better off in the past.&rdquo;</td></tr>\n<tr><td style=\"padding:26px 30px 8px;\"><div style=\"border-top:1px solid #2a1e16;\"></div></td></tr>\n<tr><td align=\"center\" style=\"padding:4px 30px 24px;font-family:Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:2px;color:#a89a86;text-transform:uppercase;\">Executive Produced by SZZN &nbsp;&middot;&nbsp; <a href=\"https://www.betterleftunsaid2.com\" style=\"color:#a89a86;\">betterleftunsaid2.com</a></td></tr>\n\n</table>\n<table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;width:100%;\">\n<tr><td style=\"padding:20px 20px 4px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:17px;color:#a89a86;\">\nMali V &middot; Better Left Unsaid 2 &middot; Executive Produced by SZZN<br>\nAll Flights Delayed (AFD)\n<tr><td align=\"center\" style=\"padding:14px 20px 0;font-family:Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:1px;color:#a89a86;\">\n<a href=\"{{{RESEND_UNSUBSCRIBE_URL}}}\" style=\"color:#a89a86;text-decoration:underline;\">Unsubscribe from BLU2 radio updates</a>\n</td></tr></td></tr></table></td></tr></table></body></html>"
   );
@@ -345,8 +435,8 @@ function sendCollegeRadioAnnounceEmail() {
 function sendDJListAnnounceEmail() {
   sendSheetBroadcast_(
     AFD_DJ_SHEET_ID,
-    AFD_DJ_SEGMENT_PROP_KEY,
-    AFD_DJ_SEGMENT_NAME,
+    OUTREACH_SEGMENT_PROP_KEY,
+    OUTREACH_SEGMENT_NAME,
     "Mali V's New Album, Better Left Unsaid 2, Is Streaming Now",
     "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Better Left Unsaid 2</title></head>\n<body style=\"margin:0;padding:0;background-color:#0a0806;font-family:Georgia,'Times New Roman',serif;\">\n<div style=\"display:none;max-height:0;overflow:hidden;opacity:0;\">New music from Mali V — two feature singles inside, plus the full album.</div>\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color:#0a0806;\">\n<tr><td align=\"center\" style=\"padding:32px 16px;\">\n<table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;width:100%;background-color:#120d0a;border:1px solid #2a1e16;\">\n\n<tr><td align=\"center\" style=\"padding:26px 20px 6px;font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:4px;color:#f2994a;text-transform:uppercase;\">New Music &nbsp;/&nbsp; Mali V</td></tr>\n<tr><td align=\"center\" style=\"padding:6px 20px 10px;\"><img src=\"https://www.betterleftunsaid2.com/img/newsletter/email_wordmark.png\" width=\"260\" alt=\"Mali V - Better Left Unsaid 2\" style=\"display:block;width:260px;max-width:68%;height:auto;\"></td></tr>\n<tr><td align=\"center\" style=\"padding:8px 20px 4px;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;letter-spacing:2px;color:#f2994a;text-transform:uppercase;\">Meet Mali V</td></tr>\n<tr><td align=\"center\" style=\"padding:0 30px 10px;font-family:Georgia,serif;font-size:14px;line-height:22px;color:#f4ede1;\">Mali V, executive produced by SZZN, just dropped a new album — <strong>Better Left Unsaid 2</strong> — and it's streaming on every platform today. Two tracks from it we think are worth your ear first:</td></tr>\n<tr><td style=\"padding:6px 30px 4px;\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border:1px solid #2a1e16;background-color:#170f0a;\">\n<tr><td style=\"padding:14px 18px;font-family:Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:2px;color:#f2994a;text-transform:uppercase;border-bottom:1px solid #2a1e16;white-space:nowrap;\">Track 1</td><td align=\"right\" style=\"padding:14px 18px;font-family:Georgia,serif;font-size:14px;color:#f4ede1;border-bottom:1px solid #2a1e16;\">Better Left Unsaid</td></tr>\n<tr><td style=\"padding:14px 18px;font-family:Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:2px;color:#f2994a;text-transform:uppercase;white-space:nowrap;\">Track 2</td><td align=\"right\" style=\"padding:14px 18px;font-family:Georgia,serif;font-size:14px;color:#f4ede1;\">Ecstacy - Ex-To-See</td></tr>\n</table>\n</td></tr>\n<tr><td align=\"center\" style=\"padding:18px 24px 4px;\">\n<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\"><tr><td align=\"center\" style=\"background-color:#d9642c;background-image:linear-gradient(135deg,#d9642c,#f2994a);border-radius:3px;\">\n<a href=\"https://distrokid.com/hyperfollow/maliv1/blu-2-2\" target=\"_blank\" style=\"display:inline-block;padding:15px 38px;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;letter-spacing:2px;color:#0a0806;text-decoration:none;text-transform:uppercase;\">Stream The Full Album</a>\n</td></tr></table></td></tr>\n<tr><td align=\"center\" style=\"padding:6px 20px 4px;font-family:Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:1px;\"><a href=\"https://distrokid.com/hyperfollow/maliv1/blu-2-2\" style=\"color:#a89a86;\">distrokid.com/hyperfollow/maliv1/blu-2-2</a></td></tr>\n<tr><td align=\"center\" style=\"padding:18px 30px 4px;font-family:Georgia,serif;font-size:14px;line-height:22px;color:#f4ede1;\">Get to know the story behind the record at <a href=\"https://www.betterleftunsaid2.com\" style=\"color:#f2994a;\">BetterLeftUnsaid2.com</a> — and if it's in your wheelhouse, we'd love to hear it in the mix.</td></tr>\n<tr><td align=\"center\" style=\"padding:16px 30px 6px;\"><img src=\"https://www.betterleftunsaid2.com/img/newsletter/email_rose.jpg\" width=\"140\" alt=\"Better Left Unsaid 2\" style=\"display:block;width:140px;max-width:38%;height:auto;border:1px solid #3a281c;margin:0 auto;\"></td></tr>\n<tr><td align=\"center\" style=\"padding:12px 30px 4px;font-family:Georgia,serif;font-style:italic;font-size:13px;line-height:21px;color:#f4ede1;\">&ldquo;Some things better left unsaid are better off in the past.&rdquo;</td></tr>\n<tr><td style=\"padding:26px 30px 8px;\"><div style=\"border-top:1px solid #2a1e16;\"></div></td></tr>\n<tr><td align=\"center\" style=\"padding:4px 30px 24px;font-family:Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:2px;color:#a89a86;text-transform:uppercase;\">Executive Produced by SZZN &nbsp;&middot;&nbsp; <a href=\"https://www.betterleftunsaid2.com\" style=\"color:#a89a86;\">betterleftunsaid2.com</a></td></tr>\n\n</table>\n<table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;width:100%;\">\n<tr><td style=\"padding:20px 20px 4px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:17px;color:#a89a86;\">\nMali V &middot; Better Left Unsaid 2 &middot; Executive Produced by SZZN<br>\nAll Flights Delayed (AFD)\n<tr><td align=\"center\" style=\"padding:14px 20px 0;font-family:Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:1px;color:#a89a86;\">\n<a href=\"{{{RESEND_UNSUBSCRIBE_URL}}}\" style=\"color:#a89a86;text-decoration:underline;\">Unsubscribe from AFD updates</a>\n</td></tr></td></tr></table></td></tr></table></body></html>"
   );
